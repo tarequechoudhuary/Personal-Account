@@ -30,6 +30,25 @@ export interface Expense {
   createdAt: number;
 }
 
+export interface IncomeCategory {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+}
+
+export interface Income {
+  id: string;
+  title: string; // যেমন: "মার্চের বেতন", "দোকানের বিক্রি", "ফ্রিল্যান্সিং"
+  amount: number;
+  date: string; // YYYY-MM-DD
+  time: string; // HH:mm
+  categoryId: string; // e.g. inc-cat-salary
+  paymentSourceId: string; // কোন অ্যাকাউন্টে টাকা জমা হয়েছে (ক্যাশ / ব্যাংক / বিকাশ)
+  note?: string;
+  createdAt: number;
+}
+
 export type LoanType = 'given' | 'taken'; // given = কাউকে ধার দিয়েছি (পাওনা), taken = কারো কাছ থেকে ধার নিয়েছি (দেনা)
 
 export interface LoanPayment {

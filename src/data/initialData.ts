@@ -1,5 +1,64 @@
-import { ExpenseCategory, PaymentSource, Expense, LoanRecord, UserProfile } from '../types';
+import {
+  ExpenseCategory,
+  PaymentSource,
+  Expense,
+  LoanRecord,
+  UserProfile,
+  IncomeCategory,
+  Income,
+} from '../types';
 import { getCurrentDateString } from '../utils/formatters';
+
+export const DEFAULT_INCOME_CATEGORIES: IncomeCategory[] = [
+  {
+    id: 'inc-cat-salary',
+    name: 'চাকরির বেতন (Salary)',
+    icon: 'Briefcase',
+    color: '#10b981', // Emerald
+  },
+  {
+    id: 'inc-cat-business',
+    name: 'ব্যবসা ও বিক্রয় (Business)',
+    icon: 'Store',
+    color: '#0ea5e9', // Sky blue
+  },
+  {
+    id: 'inc-cat-freelance',
+    name: 'ফ্রিল্যান্সিং ও চুক্তিভিত্তিক আয়',
+    icon: 'Laptop',
+    color: '#8b5cf6', // Purple
+  },
+  {
+    id: 'inc-cat-bonus',
+    name: 'বোনাস ও ইনসেন্টিভ',
+    icon: 'Award',
+    color: '#f59e0b', // Amber
+  },
+  {
+    id: 'inc-cat-rental',
+    name: 'বাড়ি/দোকান ভাড়া বাবদ আয়',
+    icon: 'Home',
+    color: '#06b6d4', // Cyan
+  },
+  {
+    id: 'inc-cat-investment',
+    name: 'বিনিয়োগ ও মুনাফা/লভ্যাংশ',
+    icon: 'TrendingUp',
+    color: '#14b8a6', // Teal
+  },
+  {
+    id: 'inc-cat-gift',
+    name: 'উপহার বা হাদিয়া',
+    icon: 'Gift',
+    color: '#ec4899', // Pink
+  },
+  {
+    id: 'inc-cat-other',
+    name: 'অন্যান্য মাধ্যম থেকে আয়',
+    icon: 'Coins',
+    color: '#64748b', // Slate
+  },
+];
 
 export const DEFAULT_USER_PROFILE: UserProfile = {
   name: 'তারেক চৌধুরী',

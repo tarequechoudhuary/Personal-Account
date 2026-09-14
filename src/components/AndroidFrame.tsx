@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   CalendarDays,
   PieChart,
@@ -8,6 +8,8 @@ import {
   RotateCcw,
   User,
   ArrowLeftRight,
+  TrendingUp,
+  ArrowDownLeft,
 } from 'lucide-react';
 import { ActiveTab } from '../types';
 
@@ -15,6 +17,7 @@ interface AndroidFrameProps {
   activeTab: ActiveTab;
   onTabChange: (tab: ActiveTab) => void;
   onOpenAddExpense: () => void;
+  onOpenAddIncome?: () => void;
   onOpenProfile: () => void;
   profileName?: string;
   onResetData: () => void;
@@ -25,11 +28,13 @@ export const AndroidFrame: React.FC<AndroidFrameProps> = ({
   activeTab,
   onTabChange,
   onOpenAddExpense,
+  onOpenAddIncome,
   onOpenProfile,
   profileName,
   onResetData,
   children,
 }) => {
+  const [isFabMenuOpen, setIsFabMenuOpen] = useState(false);
   return (
     <div className="h-full h-[100dvh] w-full bg-slate-100 flex justify-center font-sans antialiased overflow-hidden">
       {/* App Main Container (Edge-to-edge on mobile, sleek centered container on large screens) */}
@@ -51,29 +56,39 @@ export const AndroidFrame: React.FC<AndroidFrameProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5">
-            {/* User Profile Button */}
-            <button
-              id="btn-app-bar-profile"
-              onClick={onOpenProfile}
-              title="ব্যবহারকারীর প্রোফাইল ও ব্যাকআপ"
-              className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 active:scale-95 text-white pl-1.5 pr-2.5 py-1 rounded-full text-xs font-bold border border-white/20 transition-all shadow-xs"
-            >
-              <div className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-extrabold shadow-xs">
-                {profileName ? profileName[0] : <User className="w-3 h-3" />}
-              </div>
-              <span className="max-w-[75px] truncate text-[11px] font-semibold">
-                {profileName || 'প্রোফাইল'}
-              </span>
-            </button>
+            {/* Quick Add Income Button */}
+            {onOpenAddIncome && (
+              <button
+                id="btn-app-bar-add-income"
+                onClick={onOpenAddIncome}
+                title="বেতন বা অন্য মাধ্যম থেকে টাকা জমা করুন"
+                className="flex items-center gap-1 bg-emerald-700/80 hover:bg-emerald-700 text-white px-2.5 py-1.5 rounded-full text-xs font-bold shadow-xs active:scale-95 transition-all border border-emerald-400/30"
+              >
+                <TrendingUp className="w-3.5 h-3.5" />
+                <span className="text-[11px] font-bold">+ আয়</span>
+              </button>
+            )}
 
             {/* Quick Add Expense Button */}
             <button
               id="btn-app-bar-add"
               onClick={onOpenAddExpense}
-              className="flex items-center gap-1 bg-white text-emerald-800 px-3 py-1.5 rounded-full text-xs font-bold shadow-sm hover:bg-emerald-50 active:scale-95 transition-all"
+              className="flex items-center gap-1 bg-white text-emerald-800 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-bold shadow-sm hover:bg-emerald-50 active:scale-95 transition-all"
             >
               <Plus className="w-3.5 h-3.5 stroke-[3]" />
-              <span className="text-[11px]">খরচ যোগ</span>
+              <span className="text-[11px]">+ খরচ</span>
+            </button>
+
+            {/* User Profile Button */}
+            <button
+              id="btn-app-bar-profile"
+              onClick={onOpenProfile}
+              title="ব্যবহারকারীর প্রোফাইল ও ব্যাকআপ"
+              className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 active:scale-95 text-white pl-1.5 pr-2 py-1 rounded-full text-xs font-bold border border-white/20 transition-all shadow-xs"
+            >
+              <div className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-extrabold shadow-xs">
+                {profileName ? profileName[0] : <User className="w-3 h-3" />}
+              </div>
             </button>
           </div>
         </header>
@@ -83,16 +98,64 @@ export const AndroidFrame: React.FC<AndroidFrameProps> = ({
           {children}
         </main>
 
-        {/* Floating Action Button (FAB) */}
-        <div className="absolute right-5 bottom-20 z-40">
+        {/* Floating Action Button (FAB) with Speed Dial for Income & Expense */}
+        <div className="absolute right-5 bottom-20 z-40 flex flex-col items-end gap-2">
+          {isFabMenuOpen && (
+            <>
+              {/* Overlay to close menu on tap outside */}
+              <div
+                className="fixed inset-0 z-30 bg-slate-950/20 backdrop-blur-2xs"
+                onClick={() => setIsFabMenuOpen(false)}
+              />
+
+              {/* Add Income Option */}
+              <div className="relative z-40 flex items-center gap-2 animate-in slide-in-from-bottom-2 duration-150">
+                <span className="bg-slate-900 text-white text-xs font-bold px-2.5 py-1 rounded-xl shadow-md">
+                  টাকা জমা / আয়
+                </span>
+                <button
+                  id="fab-action-income"
+                  onClick={() => {
+                    setIsFabMenuOpen(false);
+                    onOpenAddIncome?.();
+                  }}
+                  className="w-12 h-12 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center shadow-lg active:scale-95 transition-all"
+                  title="বেতন বা টাকা জমা করুন"
+                >
+                  <TrendingUp className="w-6 h-6 stroke-[2.5]" />
+                </button>
+              </div>
+
+              {/* Add Expense Option */}
+              <div className="relative z-40 flex items-center gap-2 animate-in slide-in-from-bottom-1 duration-150">
+                <span className="bg-slate-900 text-white text-xs font-bold px-2.5 py-1 rounded-xl shadow-md">
+                  খরচ যোগ করুন
+                </span>
+                <button
+                  id="fab-action-expense"
+                  onClick={() => {
+                    setIsFabMenuOpen(false);
+                    onOpenAddExpense();
+                  }}
+                  className="w-12 h-12 rounded-xl bg-rose-500 hover:bg-rose-600 text-white flex items-center justify-center shadow-lg active:scale-95 transition-all"
+                  title="খরচ যোগ করুন"
+                >
+                  <Plus className="w-6 h-6 stroke-[2.5]" />
+                </button>
+              </div>
+            </>
+          )}
+
           <button
             id="fab-add-expense"
-            onClick={onOpenAddExpense}
-            className="w-14 h-14 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shadow-xl shadow-emerald-700/40 hover:scale-105 active:scale-95 transition-all group"
-            title="নতুন খরচ যোগ করুন"
-            aria-label="Add New Expense"
+            onClick={() => setIsFabMenuOpen((prev) => !prev)}
+            className={`w-14 h-14 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shadow-xl shadow-emerald-700/40 hover:scale-105 active:scale-95 transition-all relative z-40 ${
+              isFabMenuOpen ? 'rotate-45 bg-slate-800 hover:bg-slate-900' : ''
+            }`}
+            title="নতুন হিসাব যোগ করুন"
+            aria-label="Add New Entry"
           >
-            <Plus className="w-7 h-7 stroke-[2.5] group-hover:rotate-90 transition-transform duration-300" />
+            <Plus className="w-7 h-7 stroke-[2.5] transition-transform duration-200" />
           </button>
         </div>
 

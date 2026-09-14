@@ -1,7 +1,9 @@
 // Safe, resilient local storage utility for Hishab Khata
 export const STORAGE_KEYS = {
   EXPENSES: 'hishab_expenses_v3',
+  INCOMES: 'hishab_incomes_v3',
   CATEGORIES: 'hishab_categories_v3',
+  INCOME_CATEGORIES: 'hishab_income_categories_v3',
   SOURCES: 'hishab_sources_v3',
   LOANS: 'hishab_loans_v3',
   PROFILE: 'hishab_profile_v3',

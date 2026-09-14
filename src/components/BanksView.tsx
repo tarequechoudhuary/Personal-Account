@@ -6,35 +6,47 @@ import {
   Smartphone,
   Edit2,
   Trash2,
-  CreditCard,
   TrendingDown,
+  TrendingUp,
   ArrowRight,
-  Filter,
+  ArrowDownLeft,
+  Wallet,
 } from 'lucide-react';
-import { PaymentSource, Expense, ExpenseCategory, PaymentType } from '../types';
+import { PaymentSource, Expense, ExpenseCategory, PaymentType, Income, IncomeCategory } from '../types';
 import { formatCurrency, toBengaliNumber } from '../utils/formatters';
 import { ExpenseItem } from './ExpenseItem';
+import { IncomeItem } from './IncomeItem';
 
 interface BanksViewProps {
   paymentSources: PaymentSource[];
   expenses: Expense[];
+  incomes?: Income[];
   categories: ExpenseCategory[];
+  incomeCategories?: IncomeCategory[];
   onAddBank: () => void;
   onEditBank: (source: PaymentSource) => void;
   onDeleteBank: (id: string) => void;
   onEditExpense: (expense: Expense) => void;
   onDeleteExpense: (id: string) => void;
+  onAddIncomeForSource?: (sourceId: string) => void;
+  onEditIncome?: (income: Income) => void;
+  onDeleteIncome?: (id: string) => void;
 }
 
 export const BanksView: React.FC<BanksViewProps> = ({
   paymentSources,
   expenses,
+  incomes = [],
   categories,
+  incomeCategories = [],
   onAddBank,
   onEditBank,
   onDeleteBank,
   onEditExpense,
   onDeleteExpense,
+  onAddIncomeForSource,
+  onEditIncome,
+  onDeleteIncome,
 }) => {
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<PaymentType | 'all'>('all');
@@ -69,15 +81,27 @@ export const BanksView: React.FC<BanksViewProps> = ({
     return true;
   });
 
-  // Calculate total spent for a source
-  const getSourceTotal = (sourceId: string) => {
+  // Calculate totals for a source
+  const getSourceExpenseTotal = (sourceId: string) => {
     return expenses
       .filter((e) => e.paymentSourceId === sourceId)
       .reduce((sum, e) => sum + e.amount, 0);
   };
 
-  const getSourceExpenseCount = (sourceId: string) => {
-    return expenses.filter((e) => e.paymentSourceId === sourceId).length;
+  const getSourceIncomeTotal = (sourceId: string) => {
+    return incomes
+      .filter((i) => i.paymentSourceId === sourceId)
+      .reduce((sum, i) => sum + i.amount, 0);
+  };
+
+  const getSourceBalance = (sourceId: string) => {
+    return getSourceIncomeTotal(sourceId) - getSourceExpenseTotal(sourceId);
+  };
+
+  const getSourceTxCount = (sourceId: string) => {
+    const expCount = expenses.filter((e) => e.paymentSourceId === sourceId).length;
+    const incCount = incomes.filter((i) => i.paymentSourceId === sourceId).length;
+    return { expCount, incCount, total: expCount + incCount };
   };
 
   // Currently selected source for viewing individual statement
@@ -85,6 +109,36 @@ export const BanksView: React.FC<BanksViewProps> = ({
   const selectedSourceExpenses = selectedSourceId
     ? expenses.filter((e) => e.paymentSourceId === selectedSourceId)
     : [];
+  const selectedSourceIncomes = selectedSourceId
+    ? incomes.filter((i) => i.paymentSourceId === selectedSourceId)
+    : [];
+
+  // Combined transactions for selected source sorted by date/time
+  type CombinedTx =
+    | { type: 'expense'; data: Expense; date: string; time: string; timestamp: number }
+    | { type: 'income'; data: Income; date: string; time: string; timestamp: number };
+
+  const selectedSourceCombined: CombinedTx[] = [
+    ...selectedSourceExpenses.map((e) => ({
+      type: 'expense' as const,
+      data: e,
+      date: e.date,
+      time: e.time,
+      timestamp: e.createdAt,
+    })),
+    ...selectedSourceIncomes.map((i) => ({
+      type: 'income' as const,
+      data: i,
+      date: i.date,
+      time: i.time,
+      timestamp: i.createdAt,
+    })),
+  ].sort((a, b) => {
+    if (a.date === b.date) {
+      return (b.time || '00:00').localeCompare(a.time || '00:00');
+    }
+    return b.date.localeCompare(a.date);
+  });
 
   return (
     <div className="space-y-4 pb-20">
@@ -92,10 +146,10 @@ export const BanksView: React.FC<BanksViewProps> = ({
       <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-xs flex items-center justify-between">
         <div>
           <h3 className="text-base font-bold text-slate-800">
-            ব্যাংক ও ক্যাশ ব্যবস্থাপনা
+            ব্যাংক ও ক্যাশ একাউন্টস
           </h3>
           <p className="text-xs text-slate-500 mt-0.5">
-            কোন ব্যাংক বা মাধ্যম থেকে কত খরচ হয়েছে তা পর্যবেক্ষণ করুন
+            কোন ব্যাংকে কত টাকা জমা হয়েছে ও কত খরচ হয়েছে তার স্থিতি
           </p>
         </div>
         <button
@@ -155,8 +209,10 @@ export const BanksView: React.FC<BanksViewProps> = ({
       {/* Bank & Cash Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {filteredSources.map((source) => {
-          const totalSpent = getSourceTotal(source.id);
-          const count = getSourceExpenseCount(source.id);
+          const totalIncome = getSourceIncomeTotal(source.id);
+          const totalSpent = getSourceExpenseTotal(source.id);
+          const balance = totalIncome - totalSpent;
+          const { total } = getSourceTxCount(source.id);
           const isSelected = selectedSourceId === source.id;
 
           return (
@@ -201,6 +257,17 @@ export const BanksView: React.FC<BanksViewProps> = ({
                   className="flex items-center gap-1"
                   onClick={(e) => e.stopPropagation()}
                 >
+                  {/* Quick Add Income to this Account */}
+                  {onAddIncomeForSource && (
+                    <button
+                      id={`btn-add-income-to-${source.id}`}
+                      onClick={() => onAddIncomeForSource(source.id)}
+                      className="p-1.5 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors border border-emerald-200/60"
+                      title="এই অ্যাকাউন্টে টাকা জমা বা বেতন যোগ করুন"
+                    >
+                      <TrendingUp className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                   <button
                     id={`btn-edit-bank-${source.id}`}
                     onClick={() => onEditBank(source)}
@@ -222,31 +289,53 @@ export const BanksView: React.FC<BanksViewProps> = ({
                 </div>
               </div>
 
-              {/* Total spent summary footer */}
-              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                <div>
-                  <span className="text-[11px] text-slate-400 block font-medium">
-                    মোট খরচ হয়েছে
+              {/* Financial Breakdown: Inflow, Outflow, Balance */}
+              <div className="mt-3 pt-3 border-t border-slate-100 grid grid-cols-3 gap-1.5 text-center">
+                <div className="bg-slate-50/70 p-2 rounded-xl">
+                  <span className="text-[10px] text-slate-500 block font-semibold flex items-center justify-center gap-0.5">
+                    <ArrowDownLeft className="w-3 h-3 text-emerald-600" />
+                    মোট জমা
                   </span>
-                  <span className="text-base font-extrabold text-slate-800">
-                    {formatCurrency(totalSpent)}
+                  <span className="text-xs font-bold text-emerald-600 mt-0.5 block truncate">
+                    +{formatCurrency(totalIncome)}
                   </span>
                 </div>
 
-                <div className="text-right">
-                  <span className="text-[11px] text-slate-400 block font-medium">
-                    লেনদেনের সংখ্যা
+                <div className="bg-slate-50/70 p-2 rounded-xl">
+                  <span className="text-[10px] text-slate-500 block font-semibold flex items-center justify-center gap-0.5">
+                    <TrendingDown className="w-3 h-3 text-rose-500" />
+                    মোট খরচ
                   </span>
-                  <span className="text-xs font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full inline-block">
-                    {toBengaliNumber(count)} টি
+                  <span className="text-xs font-bold text-rose-600 mt-0.5 block truncate">
+                    -{formatCurrency(totalSpent)}
+                  </span>
+                </div>
+
+                <div className="bg-emerald-50/70 p-2 rounded-xl border border-emerald-100/80">
+                  <span className="text-[10px] text-emerald-800 block font-semibold flex items-center justify-center gap-0.5">
+                    <Wallet className="w-3 h-3 text-emerald-700" />
+                    ব্যালেন্স
+                  </span>
+                  <span
+                    className={`text-xs font-extrabold mt-0.5 block truncate ${
+                      balance >= 0 ? 'text-emerald-700' : 'text-rose-600'
+                    }`}
+                  >
+                    {balance >= 0 ? '' : '-'}
+                    {formatCurrency(Math.abs(balance))}
                   </span>
                 </div>
               </div>
 
               {/* Click to filter note */}
-              <div className="mt-2 text-[10px] text-indigo-600 font-semibold flex items-center gap-1">
-                <span>{isSelected ? 'বিস্তারিত লুকান' : 'বিস্তারিত তালিকা দেখুন'}</span>
-                <ArrowRight className={`w-3 h-3 transition-transform ${isSelected ? 'rotate-90' : ''}`} />
+              <div className="mt-2.5 text-[10px] text-indigo-600 font-semibold flex items-center justify-between">
+                <span className="text-slate-400">
+                  মোট {toBengaliNumber(total)} টি লেনদেন
+                </span>
+                <span className="flex items-center gap-1">
+                  <span>{isSelected ? 'স্টেটমেন্ট লুকান' : 'স্টেটমেন্ট দেখুন'}</span>
+                  <ArrowRight className={`w-3 h-3 transition-transform ${isSelected ? 'rotate-90' : ''}`} />
+                </span>
               </div>
             </div>
           );
@@ -263,36 +352,62 @@ export const BanksView: React.FC<BanksViewProps> = ({
                 style={{ backgroundColor: selectedSource.color }}
               />
               <h4 className="font-bold text-slate-800 text-sm">
-                "{selectedSource.name}" থেকে খরচের তালিকা
+                "{selectedSource.name}" এর লেনদেনের বিবরণ
               </h4>
             </div>
-            <button
-              onClick={() => setSelectedSourceId(null)}
-              className="text-xs font-semibold text-slate-500 hover:text-slate-800"
-            >
-              বন্ধ করুন
-            </button>
+            <div className="flex items-center gap-2">
+              {onAddIncomeForSource && (
+                <button
+                  onClick={() => onAddIncomeForSource(selectedSource.id)}
+                  className="text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>টাকা জমা</span>
+                </button>
+              )}
+              <button
+                onClick={() => setSelectedSourceId(null)}
+                className="text-xs font-semibold text-slate-500 hover:text-slate-800 px-2 py-1"
+              >
+                বন্ধ করুন
+              </button>
+            </div>
           </div>
 
-          {selectedSourceExpenses.length === 0 ? (
+          {selectedSourceCombined.length === 0 ? (
             <div className="bg-white rounded-2xl p-6 text-center text-slate-500 text-xs border border-slate-100">
-              এই ব্যাংক বা মাধ্যম থেকে এখনো কোনো খরচ লিপিবদ্ধ করা হয়নি।
+              এই ব্যাংক বা মাধ্যম থেকে এখনো কোনো লেনদেন লিপিবদ্ধ করা হয়নি।
             </div>
           ) : (
-            selectedSourceExpenses.map((expense) => {
-              const cat = categories.find((c) => c.id === expense.categoryId);
-              return (
-                <ExpenseItem
-                  key={expense.id}
-                  expense={expense}
-                  category={cat}
-                  categories={categories}
-                  paymentSource={selectedSource}
-                  onEdit={onEditExpense}
-                  onDelete={onDeleteExpense}
-                  showDate={true}
-                />
-              );
+            selectedSourceCombined.map((tx) => {
+              if (tx.type === 'expense') {
+                const cat = categories.find((c) => c.id === tx.data.categoryId);
+                return (
+                  <ExpenseItem
+                    key={`exp-${tx.data.id}`}
+                    expense={tx.data}
+                    category={cat}
+                    categories={categories}
+                    paymentSource={selectedSource}
+                    onEdit={onEditExpense}
+                    onDelete={onDeleteExpense}
+                    showDate={true}
+                  />
+                );
+              } else {
+                const cat = incomeCategories.find((c) => c.id === tx.data.categoryId);
+                return (
+                  <IncomeItem
+                    key={`inc-${tx.data.id}`}
+                    income={tx.data}
+                    category={cat}
+                    paymentSource={selectedSource}
+                    onEdit={(inc) => onEditIncome?.(inc)}
+                    onDelete={(id) => onDeleteIncome?.(id)}
+                    showDate={true}
+                  />
+                );
+              }
             })
           )}
         </div>

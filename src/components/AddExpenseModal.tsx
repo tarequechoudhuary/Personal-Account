@@ -18,6 +18,7 @@ interface AddExpenseModalProps {
   onOpenAddCategory: (defaultParentId?: string | null) => void;
   onOpenAddBank: () => void;
   editingExpense?: Expense | null;
+  onSwitchToIncome?: () => void;
 }
 
 const QUICK_AMOUNTS = [50, 100, 200, 500, 1000, 2000];
@@ -31,6 +32,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
   onOpenAddCategory,
   onOpenAddBank,
   editingExpense,
+  onSwitchToIncome,
 }) => {
   const mainCategories = getMainCategories(categories);
 
@@ -167,7 +169,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
         className="w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl max-h-[92vh] flex flex-col shadow-2xl border border-slate-100 animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-slate-100 shrink-0">
+        <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-slate-100 shrink-0">
           <div>
             <h3 className="text-xl font-bold text-slate-800">
               {editingExpense ? 'খরচ পরিবর্তন করুন' : 'নতুন খরচ যোগ করুন'}
@@ -182,6 +184,30 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {/* Toggle between Expense and Income if creating new */}
+        {!editingExpense && onSwitchToIncome && (
+          <div className="px-6 pt-3 shrink-0">
+            <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200/60">
+              <button
+                type="button"
+                className="flex-1 py-2 rounded-xl bg-white text-rose-700 font-bold text-xs shadow-xs flex items-center justify-center gap-1.5"
+              >
+                <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                <span>খরচ (Expense)</span>
+              </button>
+              <button
+                type="button"
+                id="btn-switch-to-income-from-expense"
+                onClick={onSwitchToIncome}
+                className="flex-1 py-2 rounded-xl text-slate-600 hover:text-emerald-700 hover:bg-white/50 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span>টাকা জমা / আয় (Income)</span>
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Scrollable Form Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">

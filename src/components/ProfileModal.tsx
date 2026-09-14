@@ -16,7 +16,15 @@ import {
   RotateCcw,
   Sparkles,
 } from 'lucide-react';
-import { UserProfile, Expense, PaymentSource, ExpenseCategory, LoanRecord } from '../types';
+import {
+  UserProfile,
+  Expense,
+  PaymentSource,
+  ExpenseCategory,
+  LoanRecord,
+  Income,
+  IncomeCategory,
+} from '../types';
 import { formatCurrency, toBengaliNumber } from '../utils/formatters';
 
 interface ProfileModalProps {
@@ -25,12 +33,15 @@ interface ProfileModalProps {
   profile: UserProfile;
   onUpdateProfile: (updated: UserProfile) => void;
   expenses: Expense[];
+  incomes?: Income[];
   categories: ExpenseCategory[];
   paymentSources: PaymentSource[];
   loans: LoanRecord[];
   onExportData: () => void;
   onImportData: (data: {
     expenses?: Expense[];
+    incomes?: Income[];
+    incomeCategories?: IncomeCategory[];
     categories?: ExpenseCategory[];
     paymentSources?: PaymentSource[];
     loans?: LoanRecord[];
@@ -47,6 +58,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   profile,
   onUpdateProfile,
   expenses,
+  incomes = [],
   categories,
   paymentSources,
   loans,
@@ -202,10 +214,16 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           )}
 
           {/* Mini Stats Banner */}
-          <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-white/10 text-center">
+          <div className="grid grid-cols-4 gap-1.5 mt-4 pt-3 border-t border-white/10 text-center">
+            <div className="bg-white/5 rounded-xl p-1.5">
+              <span className="text-[10px] text-slate-400 block">মোট জমা</span>
+              <span className="text-xs font-bold text-emerald-400 truncate block">
+                {formatCurrency(incomes.reduce((sum, i) => sum + i.amount, 0))}
+              </span>
+            </div>
             <div className="bg-white/5 rounded-xl p-1.5">
               <span className="text-[10px] text-slate-400 block">মোট খরচ</span>
-              <span className="text-xs font-bold text-emerald-400 truncate block">
+              <span className="text-xs font-bold text-rose-400 truncate block">
                 {formatCurrency(totalSpent)}
               </span>
             </div>

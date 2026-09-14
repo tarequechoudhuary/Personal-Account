@@ -27,6 +27,10 @@ import {
   Plane,
   User,
   Users,
+  TrendingUp,
+  Coins,
+  Award,
+  Store,
 } from 'lucide-react';
 
 const ICON_MAP: Record<string, React.ElementType> = {
@@ -57,6 +61,10 @@ const ICON_MAP: Record<string, React.ElementType> = {
   Plane,
   User,
   Users,
+  TrendingUp,
+  Coins,
+  Award,
+  Store,
 };
 
 export const AVAILABLE_ICONS = [
