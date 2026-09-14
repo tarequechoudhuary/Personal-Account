@@ -1,22 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   CalendarDays,
   PieChart,
   Landmark,
   Layers,
   Plus,
-  Wifi,
-  BatteryMedium,
-  Signal,
-  Smartphone,
-  Maximize2,
-  Minimize2,
   RotateCcw,
   User,
   ArrowLeftRight,
 } from 'lucide-react';
 import { ActiveTab } from '../types';
-import { getCurrentTimeString, toBengaliNumber } from '../utils/formatters';
 
 interface AndroidFrameProps {
   activeTab: ActiveTab;
@@ -37,102 +30,38 @@ export const AndroidFrame: React.FC<AndroidFrameProps> = ({
   onResetData,
   children,
 }) => {
-  const [currentTime, setCurrentTime] = useState(getCurrentTimeString());
-  const [isPhoneFrame, setIsPhoneFrame] = useState(true);
-
-  // Update clock every minute
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(getCurrentTimeString());
-    }, 30000);
-    return () => clearInterval(timer);
-  }, []);
-
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-start sm:py-6 sm:px-4 font-sans select-none antialiased">
-      {/* Top Desktop Controls Bar */}
-      <header className="w-full max-w-md hidden sm:flex items-center justify-between mb-3 px-2 text-xs text-slate-400">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="font-semibold text-slate-300">অ্যান্ড্রয়েড খরচ ট্র্যাকার অ্যাপ</span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={onOpenProfile}
-            title="ব্যবহারকারীর প্রোফাইল ও ডাটা ব্যাকআপ"
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
-          >
-            <User className="w-3.5 h-3.5 text-emerald-400" />
-            <span>{profileName || 'প্রোফাইল ও ব্যাকআপ'}</span>
-          </button>
-
-          <button
-            onClick={onResetData}
-            title="নমুনা ডাটায় রিসেট করুন"
-            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>রিসেট</span>
-          </button>
-
-          <button
-            onClick={() => setIsPhoneFrame(!isPhoneFrame)}
-            title={isPhoneFrame ? 'ফুলস্ক্রিন মোড' : 'মোবাইল ফ্রেম মোড'}
-            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
-          >
-            {isPhoneFrame ? <Maximize2 className="w-3.5 h-3.5" /> : <Minimize2 className="w-3.5 h-3.5" />}
-          </button>
-        </div>
-      </header>
-
-      {/* Android Device Shell */}
-      <div
-        className={`w-full transition-all duration-300 flex flex-col ${
-          isPhoneFrame
-            ? 'sm:max-w-[430px] sm:h-[880px] sm:max-h-[92vh] sm:rounded-[44px] sm:border-[10px] sm:border-slate-800 sm:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7)] sm:ring-1 sm:ring-slate-700'
-            : 'max-w-3xl min-h-screen sm:rounded-3xl sm:border border-slate-800'
-        } bg-slate-100 relative overflow-hidden`}
-      >
-        {/* Android Punch-hole Camera (Simulated) */}
-        {isPhoneFrame && (
-          <div className="absolute top-2 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-black z-40 hidden sm:block pointer-events-none ring-2 ring-slate-800/60" />
-        )}
-
-        {/* Android Status Bar */}
-        <div className="bg-emerald-700 text-emerald-100 px-5 pt-3 pb-2 flex items-center justify-between text-xs font-semibold z-30 shrink-0">
-          <span className="tracking-wide text-white text-xs font-bold">
-            {toBengaliNumber(currentTime)}
-          </span>
-
-          <div className="flex items-center gap-2 text-white">
-            <Signal className="w-3.5 h-3.5" />
-            <Wifi className="w-3.5 h-3.5" />
-            <div className="flex items-center gap-0.5">
-              <span className="text-[10px]">৮৫%</span>
-              <BatteryMedium className="w-4 h-4" />
-            </div>
-          </div>
-        </div>
-
-        {/* Android App Top Header */}
-        <div className="bg-emerald-600 text-white px-4 py-3 shadow-md flex items-center justify-between z-30 shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-white/15 backdrop-blur-xs flex items-center justify-center border border-white/20">
-              <Landmark className="w-4 h-4 text-white" />
+    <div className="min-h-screen bg-slate-100 flex justify-center font-sans antialiased">
+      {/* App Main Container (Edge-to-edge on mobile, sleek centered container on large screens) */}
+      <div className="w-full max-w-lg min-h-screen flex flex-col bg-slate-50 shadow-xl relative">
+        {/* Real App Header - Starts immediately at the top without any fake status bar or camera notch */}
+        <header className="bg-emerald-600 text-white px-4 py-3 shadow-md flex items-center justify-between z-30 shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-white/15 backdrop-blur-xs flex items-center justify-center border border-white/20 shadow-xs">
+              <Landmark className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="font-bold text-sm tracking-tight leading-tight">
+              <h1 className="font-bold text-base tracking-tight leading-tight">
                 হিসাব খাতা
               </h1>
-              <p className="text-[10px] text-emerald-100 leading-none">
+              <p className="text-[11px] text-emerald-100 leading-none mt-0.5">
                 দৈনিক ও মাসিক খরচের হিসাব
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-1.5">
-            {/* User Profile Button with Icon & Name */}
+            {/* Reset Data Button */}
+            <button
+              id="btn-app-bar-reset"
+              onClick={onResetData}
+              title="নমুনা ডাটায় রিসেট করুন"
+              className="p-1.5 rounded-full bg-white/15 hover:bg-white/25 active:scale-95 text-emerald-100 hover:text-white transition-all border border-white/15"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+            </button>
+
+            {/* User Profile Button */}
             <button
               id="btn-app-bar-profile"
               onClick={onOpenProfile}
@@ -142,21 +71,22 @@ export const AndroidFrame: React.FC<AndroidFrameProps> = ({
               <div className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-extrabold shadow-xs">
                 {profileName ? profileName[0] : <User className="w-3 h-3" />}
               </div>
-              <span className="max-w-[70px] truncate text-[11px] font-semibold">
+              <span className="max-w-[75px] truncate text-[11px] font-semibold">
                 {profileName || 'প্রোফাইল'}
               </span>
             </button>
 
+            {/* Quick Add Expense Button */}
             <button
               id="btn-app-bar-add"
               onClick={onOpenAddExpense}
-              className="flex items-center gap-1 bg-white text-emerald-800 px-2.5 py-1 rounded-full text-xs font-bold shadow-sm hover:bg-emerald-50 active:scale-95 transition-all"
+              className="flex items-center gap-1 bg-white text-emerald-800 px-3 py-1.5 rounded-full text-xs font-bold shadow-sm hover:bg-emerald-50 active:scale-95 transition-all"
             >
               <Plus className="w-3.5 h-3.5 stroke-[3]" />
               <span className="text-[11px]">খরচ যোগ</span>
             </button>
           </div>
-        </div>
+        </header>
 
         {/* Main Content Area (Scrollable Screen) */}
         <main className="flex-1 overflow-y-auto px-4 py-4 relative overscroll-contain">
@@ -164,7 +94,7 @@ export const AndroidFrame: React.FC<AndroidFrameProps> = ({
         </main>
 
         {/* Floating Action Button (FAB) */}
-        <div className="absolute right-5 bottom-20 z-40">
+        <div className="fixed sm:absolute right-5 bottom-20 z-40">
           <button
             id="fab-add-expense"
             onClick={onOpenAddExpense}
@@ -176,8 +106,8 @@ export const AndroidFrame: React.FC<AndroidFrameProps> = ({
           </button>
         </div>
 
-        {/* Material 3 Bottom Navigation Bar */}
-        <nav aria-label="Main Navigation" className="bg-white/95 backdrop-blur-md border-t border-slate-200/80 px-1 py-1.5 flex items-center justify-around z-30 shrink-0 shadow-lg">
+        {/* Bottom Navigation Bar */}
+        <nav aria-label="Main Navigation" className="sticky bottom-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 px-1 py-1.5 flex items-center justify-around z-30 shrink-0 shadow-lg">
           {/* Tab 1: Daily */}
           <button
             id="nav-tab-daily"
@@ -193,9 +123,9 @@ export const AndroidFrame: React.FC<AndroidFrameProps> = ({
                 activeTab === 'daily' ? 'bg-emerald-100 text-emerald-700' : ''
               }`}
             >
-              <CalendarDays className="w-4 h-4 sm:w-5 sm:h-5" />
+              <CalendarDays className="w-5 h-5" />
             </div>
-            <span className="text-[10px] sm:text-[11px] mt-0.5 whitespace-nowrap">দৈনিক</span>
+            <span className="text-[11px] mt-0.5 whitespace-nowrap">দৈনিক</span>
           </button>
 
           {/* Tab 2: Monthly */}
@@ -213,12 +143,12 @@ export const AndroidFrame: React.FC<AndroidFrameProps> = ({
                 activeTab === 'monthly' ? 'bg-emerald-100 text-emerald-700' : ''
               }`}
             >
-              <PieChart className="w-4 h-4 sm:w-5 sm:h-5" />
+              <PieChart className="w-5 h-5" />
             </div>
-            <span className="text-[10px] sm:text-[11px] mt-0.5 whitespace-nowrap">মাসিক</span>
+            <span className="text-[11px] mt-0.5 whitespace-nowrap">মাসিক</span>
           </button>
 
-          {/* Tab 3: Loans (কাউকে লোন দিলে বা কারো থেকে লোন নিলে) */}
+          {/* Tab 3: Loans */}
           <button
             id="nav-tab-loans"
             onClick={() => onTabChange('loans')}
@@ -233,9 +163,9 @@ export const AndroidFrame: React.FC<AndroidFrameProps> = ({
                 activeTab === 'loans' ? 'bg-emerald-100 text-emerald-700' : ''
               }`}
             >
-              <ArrowLeftRight className="w-4 h-4 sm:w-5 sm:h-5" />
+              <ArrowLeftRight className="w-5 h-5" />
             </div>
-            <span className="text-[10px] sm:text-[11px] mt-0.5 whitespace-nowrap">লোন/ধার</span>
+            <span className="text-[11px] mt-0.5 whitespace-nowrap">লোন/ধার</span>
           </button>
 
           {/* Tab 4: Banks & Cash */}
@@ -253,9 +183,9 @@ export const AndroidFrame: React.FC<AndroidFrameProps> = ({
                 activeTab === 'banks' ? 'bg-emerald-100 text-emerald-700' : ''
               }`}
             >
-              <Landmark className="w-4 h-4 sm:w-5 sm:h-5" />
+              <Landmark className="w-5 h-5" />
             </div>
-            <span className="text-[10px] sm:text-[11px] mt-0.5 whitespace-nowrap">ব্যাংক</span>
+            <span className="text-[11px] mt-0.5 whitespace-nowrap">ব্যাংক</span>
           </button>
 
           {/* Tab 5: Categories */}
@@ -273,18 +203,11 @@ export const AndroidFrame: React.FC<AndroidFrameProps> = ({
                 activeTab === 'categories' ? 'bg-emerald-100 text-emerald-700' : ''
               }`}
             >
-              <Layers className="w-4 h-4 sm:w-5 sm:h-5" />
+              <Layers className="w-5 h-5" />
             </div>
-            <span className="text-[10px] sm:text-[11px] mt-0.5 whitespace-nowrap">খাত/হাত</span>
+            <span className="text-[11px] mt-0.5 whitespace-nowrap">খাত/হাত</span>
           </button>
         </nav>
-
-        {/* Android Gesture Bar (Bottom indicator) */}
-        {isPhoneFrame && (
-          <div className="w-full bg-white pb-1.5 flex justify-center shrink-0">
-            <div className="w-32 h-1 bg-slate-300 rounded-full" />
-          </div>
-        )}
       </div>
     </div>
   );
