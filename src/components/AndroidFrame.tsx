@@ -31,9 +31,9 @@ export const AndroidFrame: React.FC<AndroidFrameProps> = ({
   children,
 }) => {
   return (
-    <div className="min-h-screen bg-slate-100 flex justify-center font-sans antialiased">
+    <div className="h-full h-[100dvh] w-full bg-slate-100 flex justify-center font-sans antialiased overflow-hidden">
       {/* App Main Container (Edge-to-edge on mobile, sleek centered container on large screens) */}
-      <div className="w-full max-w-lg min-h-screen flex flex-col bg-slate-50 shadow-xl relative">
+      <div className="w-full max-w-lg h-full h-[100dvh] flex flex-col bg-slate-50 shadow-xl relative overflow-hidden">
         {/* Real App Header - Starts immediately at the top without any fake status bar or camera notch */}
         <header className="bg-emerald-600 text-white px-4 py-3 shadow-md flex items-center justify-between z-30 shrink-0">
           <div className="flex items-center gap-2.5">
@@ -78,13 +78,13 @@ export const AndroidFrame: React.FC<AndroidFrameProps> = ({
           </div>
         </header>
 
-        {/* Main Content Area (Scrollable Screen) */}
-        <main className="flex-1 overflow-y-auto px-4 py-4 relative overscroll-contain">
+        {/* Main Content Area (Scrollable Screen with smooth inertia scrolling and generous padding) */}
+        <main className="flex-1 overflow-y-auto px-4 pt-3 pb-24 relative overscroll-y-contain -webkit-overflow-scrolling-touch">
           {children}
         </main>
 
         {/* Floating Action Button (FAB) */}
-        <div className="fixed sm:absolute right-5 bottom-20 z-40">
+        <div className="absolute right-5 bottom-20 z-40">
           <button
             id="fab-add-expense"
             onClick={onOpenAddExpense}
@@ -97,7 +97,7 @@ export const AndroidFrame: React.FC<AndroidFrameProps> = ({
         </div>
 
         {/* Bottom Navigation Bar */}
-        <nav aria-label="Main Navigation" className="sticky bottom-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 px-1 py-1.5 flex items-center justify-around z-30 shrink-0 shadow-lg">
+        <nav aria-label="Main Navigation" className="shrink-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 px-1 py-1.5 flex items-center justify-around z-30 shadow-lg pb-[max(0.375rem,env(safe-area-inset-bottom))]">
           {/* Tab 1: Daily */}
           <button
             id="nav-tab-daily"
