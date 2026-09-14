@@ -37,6 +37,8 @@ interface ProfileModalProps {
     profile?: UserProfile;
   }) => void;
   onResetData: () => void;
+  onClearAllData?: () => void;
+  onLoadDemoData?: () => void;
 }
 
 export const ProfileModal: React.FC<ProfileModalProps> = ({
@@ -51,6 +53,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   onExportData,
   onImportData,
   onResetData,
+  onClearAllData,
+  onLoadDemoData,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(profile.name);
@@ -412,22 +416,40 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           </div>
         </div>
 
-        {/* Reset App Option */}
-        <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-          <button
-            onClick={onResetData}
-            className="text-[11px] text-rose-600 hover:underline flex items-center gap-1 font-semibold"
-          >
-            <RotateCcw className="w-3 h-3" />
-            <span>অ্যাপ ডাটায় রিসেট করুন</span>
-          </button>
+        {/* Reset & Clean Options */}
+        <div className="pt-3 border-t border-slate-100 space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            {onClearAllData && (
+              <button
+                type="button"
+                onClick={onClearAllData}
+                className="text-xs text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 transition-colors"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>সব হিসাব সাফ করুন (নতুন খাতা)</span>
+              </button>
+            )}
 
-          <button
-            onClick={onClose}
-            className="py-1.5 px-4 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 transition-colors"
-          >
-            বন্ধ করুন
-          </button>
+            {onLoadDemoData && (
+              <button
+                type="button"
+                onClick={onLoadDemoData}
+                className="text-xs text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-xl font-semibold flex items-center gap-1.5 transition-colors"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                <span>নমুনা ডাটা যোগ করুন</span>
+              </button>
+            )}
+          </div>
+
+          <div className="flex justify-end pt-1">
+            <button
+              onClick={onClose}
+              className="py-2 px-5 rounded-xl bg-slate-900 text-white font-bold text-xs hover:bg-slate-800 active:scale-95 transition-all shadow-xs"
+            >
+              বন্ধ করুন
+            </button>
+          </div>
         </div>
       </div>
     </div>

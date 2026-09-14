@@ -210,15 +210,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                   {/* Delete Main Category */}
                   <button
                     id={`btn-delete-main-${main.id}`}
-                    onClick={() => {
-                      if (
-                        confirm(
-                          `"${main.name}" প্রধান খাতটি মুছে ফেলতে চান? এর অধীনে থাকা উপ-খাতগুলোও মুছে যাবে।`
-                        )
-                      ) {
-                        onDeleteCategory(main.id);
-                      }
-                    }}
+                    onClick={() => onDeleteCategory(main.id)}
                     className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-white rounded-lg transition-colors"
                     title="মুছে ফেলুন"
                   >
@@ -297,13 +289,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                               </button>
                               <button
                                 id={`btn-delete-sub-${sub.id}`}
-                                onClick={() => {
-                                  if (
-                                    confirm(`"${sub.name}" উপ-খাতটি মুছে ফেলতে চান?`)
-                                  ) {
-                                    onDeleteCategory(sub.id);
-                                  }
-                                }}
+                                onClick={() => onDeleteCategory(sub.id)}
                                 className="p-1 text-slate-400 hover:text-rose-600 rounded-md transition-colors"
                                 title="মুছে ফেলুন"
                               >

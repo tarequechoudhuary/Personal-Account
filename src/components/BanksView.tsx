@@ -212,15 +212,7 @@ export const BanksView: React.FC<BanksViewProps> = ({
                   {!source.isDefault && (
                     <button
                       id={`btn-delete-bank-${source.id}`}
-                      onClick={() => {
-                        if (
-                          window.confirm(
-                            `আপনি কি "${source.name}" মুছে ফেলতে চান? এর সাথে সম্পর্কিত খরচগুলো ক্যাশে স্থানান্তরিত হবে।`
-                          )
-                        ) {
-                          onDeleteBank(source.id);
-                        }
-                      }}
+                      onClick={() => onDeleteBank(source.id)}
                       className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
                       title="মুছে ফেলুন"
                     >

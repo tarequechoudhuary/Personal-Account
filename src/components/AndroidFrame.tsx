@@ -51,16 +51,6 @@ export const AndroidFrame: React.FC<AndroidFrameProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5">
-            {/* Reset Data Button */}
-            <button
-              id="btn-app-bar-reset"
-              onClick={onResetData}
-              title="নমুনা ডাটায় রিসেট করুন"
-              className="p-1.5 rounded-full bg-white/15 hover:bg-white/25 active:scale-95 text-emerald-100 hover:text-white transition-all border border-white/15"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-            </button>
-
             {/* User Profile Button */}
             <button
               id="btn-app-bar-profile"

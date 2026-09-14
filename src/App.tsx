@@ -26,74 +26,137 @@ import { AddCategoryModal } from './components/AddCategoryModal';
 import { AddLoanModal } from './components/AddLoanModal';
 import { AddLoanPaymentModal } from './components/AddLoanPaymentModal';
 import { ProfileModal } from './components/ProfileModal';
+import { ConfirmModal } from './components/ConfirmModal';
 import { getCurrentDateString } from './utils/formatters';
-
-const STORAGE_KEYS = {
-  EXPENSES: 'hishab_expenses_v2',
-  CATEGORIES: 'hishab_categories_v2',
-  SOURCES: 'hishab_sources_v2',
-  LOANS: 'hishab_loans_v2',
-  PROFILE: 'hishab_profile_v2',
-};
+import {
+  STORAGE_KEYS,
+  getStoredItem,
+  setStoredItem,
+} from './utils/storage';
 
 export default function App() {
-  // Load expenses
+  // Load expenses with migration and zero-ghost-data guarantee
   const [expenses, setExpenses] = useState<Expense[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.EXPENSES);
-      if (saved) return JSON.parse(saved);
-    } catch (err) {
-      console.error('Error loading expenses:', err);
+    // 1. Try v3 storage
+    const v3Saved = getStoredItem<Expense[] | null>(STORAGE_KEYS.EXPENSES, null);
+    if (v3Saved !== null && Array.isArray(v3Saved)) {
+      return v3Saved;
     }
-    return getInitialExpenses();
+    // 2. Try migration from v2 if user had previously entered expenses
+    try {
+      const v2Saved = localStorage.getItem('hishab_expenses_v2');
+      if (v2Saved) {
+        const parsed = JSON.parse(v2Saved);
+        if (Array.isArray(parsed)) {
+          setStoredItem(STORAGE_KEYS.EXPENSES, parsed);
+          return parsed;
+        }
+      }
+    } catch (e) {}
+    // 3. If fresh install, start with clean slate (no fake transactions)
+    setStoredItem(STORAGE_KEYS.INITIALIZED, true);
+    setStoredItem(STORAGE_KEYS.EXPENSES, []);
+    return [];
   });
 
   // Load categories
   const [categories, setCategories] = useState<ExpenseCategory[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.CATEGORIES);
-      if (saved) return JSON.parse(saved);
-    } catch (err) {
-      console.error('Error loading categories:', err);
+    const v3Saved = getStoredItem<ExpenseCategory[] | null>(STORAGE_KEYS.CATEGORIES, null);
+    if (v3Saved !== null && Array.isArray(v3Saved) && v3Saved.length > 0) {
+      return v3Saved;
     }
+    try {
+      const v2Saved = localStorage.getItem('hishab_categories_v2');
+      if (v2Saved) {
+        const parsed = JSON.parse(v2Saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setStoredItem(STORAGE_KEYS.CATEGORIES, parsed);
+          return parsed;
+        }
+      }
+    } catch (e) {}
+    setStoredItem(STORAGE_KEYS.CATEGORIES, DEFAULT_CATEGORIES);
     return DEFAULT_CATEGORIES;
   });
 
   // Load payment sources (banks & cash)
   const [paymentSources, setPaymentSources] = useState<PaymentSource[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.SOURCES);
-      if (saved) return JSON.parse(saved);
-    } catch (err) {
-      console.error('Error loading payment sources:', err);
+    const v3Saved = getStoredItem<PaymentSource[] | null>(STORAGE_KEYS.SOURCES, null);
+    if (v3Saved !== null && Array.isArray(v3Saved) && v3Saved.length > 0) {
+      return v3Saved;
     }
+    try {
+      const v2Saved = localStorage.getItem('hishab_sources_v2');
+      if (v2Saved) {
+        const parsed = JSON.parse(v2Saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setStoredItem(STORAGE_KEYS.SOURCES, parsed);
+          return parsed;
+        }
+      }
+    } catch (e) {}
+    setStoredItem(STORAGE_KEYS.SOURCES, DEFAULT_PAYMENT_SOURCES);
     return DEFAULT_PAYMENT_SOURCES;
   });
 
-  // Load loans (দেনা ও পাওনা হিসাব)
+  // Load loans (দেনা ও পাওনা হিসাব) with zero-ghost-data guarantee
   const [loans, setLoans] = useState<LoanRecord[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.LOANS);
-      if (saved) return JSON.parse(saved);
-    } catch (err) {
-      console.error('Error loading loans:', err);
+    const v3Saved = getStoredItem<LoanRecord[] | null>(STORAGE_KEYS.LOANS, null);
+    if (v3Saved !== null && Array.isArray(v3Saved)) {
+      return v3Saved;
     }
-    return getInitialLoans();
+    try {
+      const v2Saved = localStorage.getItem('hishab_loans_v2');
+      if (v2Saved) {
+        const parsed = JSON.parse(v2Saved);
+        if (Array.isArray(parsed)) {
+          setStoredItem(STORAGE_KEYS.LOANS, parsed);
+          return parsed;
+        }
+      }
+    } catch (e) {}
+    setStoredItem(STORAGE_KEYS.LOANS, []);
+    return [];
   });
 
   // Load user profile
   const [profile, setProfile] = useState<UserProfile>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.PROFILE);
-      if (saved) return JSON.parse(saved);
-    } catch (err) {
-      console.error('Error loading profile:', err);
+    const v3Saved = getStoredItem<UserProfile | null>(STORAGE_KEYS.PROFILE, null);
+    if (v3Saved !== null && typeof v3Saved === 'object') {
+      return v3Saved;
     }
+    try {
+      const v2Saved = localStorage.getItem('hishab_profile_v2');
+      if (v2Saved) {
+        const parsed = JSON.parse(v2Saved);
+        if (parsed && typeof parsed === 'object') {
+          setStoredItem(STORAGE_KEYS.PROFILE, parsed);
+          return parsed;
+        }
+      }
+    } catch (e) {}
+    setStoredItem(STORAGE_KEYS.PROFILE, DEFAULT_USER_PROFILE);
     return DEFAULT_USER_PROFILE;
   });
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('daily');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // In-app Confirmation Modal State (Reliable across all devices & PWAs)
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText?: string;
+    cancelText?: string;
+    isDangerous?: boolean;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   // Modals state
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
@@ -114,45 +177,25 @@ export default function App() {
 
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
-  // Sync to localStorage
+  // Persistent auto-sync safeguards
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(expenses));
-    } catch (e) {
-      console.error(e);
-    }
+    setStoredItem(STORAGE_KEYS.EXPENSES, expenses);
   }, [expenses]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(categories));
-    } catch (e) {
-      console.error(e);
-    }
+    setStoredItem(STORAGE_KEYS.CATEGORIES, categories);
   }, [categories]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEYS.SOURCES, JSON.stringify(paymentSources));
-    } catch (e) {
-      console.error(e);
-    }
+    setStoredItem(STORAGE_KEYS.SOURCES, paymentSources);
   }, [paymentSources]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEYS.LOANS, JSON.stringify(loans));
-    } catch (e) {
-      console.error(e);
-    }
+    setStoredItem(STORAGE_KEYS.LOANS, loans);
   }, [loans]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(profile));
-    } catch (e) {
-      console.error(e);
-    }
+    setStoredItem(STORAGE_KEYS.PROFILE, profile);
   }, [profile]);
 
   const showToast = (msg: string) => {
@@ -178,28 +221,55 @@ export default function App() {
     id?: string
   ) => {
     if (id) {
-      setExpenses((prev) =>
-        prev.map((item) =>
+      setExpenses((prev) => {
+        const next = prev.map((item) =>
           item.id === id ? { ...item, ...expenseData } : item
-        )
-      );
+        );
+        setStoredItem(STORAGE_KEYS.EXPENSES, next);
+        return next;
+      });
       showToast('খরচ সফলভাবে আপডেট করা হয়েছে');
     } else {
       const newExpense: Expense = {
         ...expenseData,
-        id: `exp-${Date.now()}-${Math.random().toString(36).substring(2, 5)}`,
+        id: `exp-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
         createdAt: Date.now(),
       };
-      setExpenses((prev) => [newExpense, ...prev]);
+      setExpenses((prev) => {
+        const next = [newExpense, ...prev];
+        setStoredItem(STORAGE_KEYS.EXPENSES, next);
+        return next;
+      });
       showToast('নতুন খরচ যোগ করা হয়েছে');
     }
     setIsExpenseModalOpen(false);
     setEditingExpense(null);
   };
 
-  const handleDeleteExpense = (id: string) => {
-    setExpenses((prev) => prev.filter((item) => item.id !== id));
+  const executeDeleteExpense = (id: string) => {
+    setExpenses((prev) => {
+      const next = prev.filter((item) => item.id !== id);
+      setStoredItem(STORAGE_KEYS.EXPENSES, next);
+      return next;
+    });
     showToast('খরচ মুছে ফেলা হয়েছে');
+  };
+
+  const handleDeleteExpense = (id: string) => {
+    const item = expenses.find((e) => e.id === id);
+    const title = item ? item.title : 'এই হিসাবটি';
+    setConfirmModal({
+      isOpen: true,
+      title: 'খরচ মুছে ফেলতে চান?',
+      message: `আপনি কি "${title}" খরচের হিসাবটি স্থায়ীভাবে মুছে ফেলতে চান?`,
+      confirmText: 'হ্যাঁ, মুছুন',
+      cancelText: 'বাতিল',
+      isDangerous: true,
+      onConfirm: () => {
+        executeDeleteExpense(id);
+        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+      },
+    });
   };
 
   // Bank Handlers
@@ -218,29 +288,66 @@ export default function App() {
     id?: string
   ) => {
     if (id) {
-      setPaymentSources((prev) =>
-        prev.map((item) => (item.id === id ? { ...item, ...sourceData } : item))
-      );
+      setPaymentSources((prev) => {
+        const next = prev.map((item) =>
+          item.id === id ? { ...item, ...sourceData } : item
+        );
+        setStoredItem(STORAGE_KEYS.SOURCES, next);
+        return next;
+      });
       showToast('ব্যাংক অ্যাকাউন্ট আপডেট করা হয়েছে');
     } else {
       const newSource: PaymentSource = {
         ...sourceData,
         id: `src-${Date.now()}`,
       };
-      setPaymentSources((prev) => [...prev, newSource]);
+      setPaymentSources((prev) => {
+        const next = [...prev, newSource];
+        setStoredItem(STORAGE_KEYS.SOURCES, next);
+        return next;
+      });
       showToast('নতুন ব্যাংক বা অ্যাকাউন্ট যুক্ত হয়েছে');
     }
     setIsBankModalOpen(false);
     setEditingBank(null);
   };
 
+  const executeDeleteBank = (id: string) => {
+    setPaymentSources((prev) => {
+      const next = prev.filter((item) => item.id !== id);
+      setStoredItem(STORAGE_KEYS.SOURCES, next);
+      return next;
+    });
+    // Remap any expenses using this bank to the first available source
+    const fallbackId = paymentSources.find((s) => s.id !== id)?.id || 'src-cash';
+    setExpenses((prev) => {
+      const next = prev.map((e) =>
+        e.paymentSourceId === id ? { ...e, paymentSourceId: fallbackId } : e
+      );
+      setStoredItem(STORAGE_KEYS.EXPENSES, next);
+      return next;
+    });
+    showToast('ব্যাংক অ্যাকাউন্ট মুছে ফেলা হয়েছে');
+  };
+
   const handleDeleteBank = (id: string) => {
     if (paymentSources.length <= 1) {
-      alert('কমপক্ষে একটি ব্যাংক বা নগদ ক্যাশ থাকা আবশ্যক!');
+      showToast('⚠️ কমপক্ষে একটি মাধ্যম (ক্যাশ বা ব্যাংক) থাকতে হবে!');
       return;
     }
-    setPaymentSources((prev) => prev.filter((item) => item.id !== id));
-    showToast('ব্যাংক মুছে ফেলা হয়েছে');
+    const source = paymentSources.find((s) => s.id === id);
+    setConfirmModal({
+      isOpen: true,
+      title: 'অ্যাকাউন্ট মুছে ফেলবেন?',
+      message: `আপনি কি "${source?.name || 'অ্যাকাউন্টটি'}" মুছে ফেলতে চান? এর সাথে সম্পর্কিত খরচগুলো ক্যাশ মাধ্যমে স্থানান্তরিত হবে।`,
+      confirmText: 'মুছে ফেলুন',
+      cancelText: 'বাতিল',
+      isDangerous: true,
+      onConfirm: () => {
+        executeDeleteBank(id);
+        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+      },
+    });
   };
 
   // Category Handlers
@@ -261,16 +368,24 @@ export default function App() {
     id?: string
   ) => {
     if (id) {
-      setCategories((prev) =>
-        prev.map((item) => (item.id === id ? { ...item, ...catData } : item))
-      );
+      setCategories((prev) => {
+        const next = prev.map((item) =>
+          item.id === id ? { ...item, ...catData } : item
+        );
+        setStoredItem(STORAGE_KEYS.CATEGORIES, next);
+        return next;
+      });
       showToast('খরচের খাত আপডেট করা হয়েছে');
     } else {
       const newCat: ExpenseCategory = {
         ...catData,
         id: `cat-${Date.now()}`,
       };
-      setCategories((prev) => [...prev, newCat]);
+      setCategories((prev) => {
+        const next = [...prev, newCat];
+        setStoredItem(STORAGE_KEYS.CATEGORIES, next);
+        return next;
+      });
       showToast('নতুন খরচের খাত যুক্ত হয়েছে');
     }
     setIsCategoryModalOpen(false);
@@ -278,14 +393,33 @@ export default function App() {
     setCategoryDefaultParentId(null);
   };
 
+  const executeDeleteCategory = (id: string) => {
+    setCategories((prev) => {
+      const next = prev.filter((item) => item.id !== id && item.parentId !== id);
+      setStoredItem(STORAGE_KEYS.CATEGORIES, next);
+      return next;
+    });
+    showToast('খাত মুছে ফেলা হয়েছে');
+  };
+
   const handleDeleteCategory = (id: string) => {
     if (categories.length <= 1) {
-      alert('কমপক্ষে একটি খরচের খাত থাকা আবশ্যক!');
+      showToast('⚠️ কমপক্ষে একটি খরচের খাত থাকা আবশ্যক!');
       return;
     }
-    // Delete this category and all sub-categories if it's a main category
-    setCategories((prev) => prev.filter((item) => item.id !== id && item.parentId !== id));
-    showToast('খাত মুছে ফেলা হয়েছে');
+    const cat = categories.find((c) => c.id === id);
+    setConfirmModal({
+      isOpen: true,
+      title: 'খাত মুছে ফেলতে চান?',
+      message: `আপনি কি "${cat?.name || 'খাতটি'}" মুছে ফেলতে চান? এর অধীনে থাকা উপ-খাতগুলোও মুছে যাবে।`,
+      confirmText: 'মুছে ফেলুন',
+      cancelText: 'বাতিল',
+      isDangerous: true,
+      onConfirm: () => {
+        executeDeleteCategory(id);
+        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+      },
+    });
   };
 
   // Loan Handlers (কাউকে লোন দিলে বা কারো থেকে লোন নিলে)
@@ -304,8 +438,8 @@ export default function App() {
     id?: string
   ) => {
     if (id) {
-      setLoans((prev) =>
-        prev.map((loan) => {
+      setLoans((prev) => {
+        const next = prev.map((loan) => {
           if (loan.id === id) {
             const totalPaid = loan.payments.reduce((sum, p) => sum + p.amount, 0);
             const status =
@@ -321,8 +455,10 @@ export default function App() {
             };
           }
           return loan;
-        })
-      );
+        });
+        setStoredItem(STORAGE_KEYS.LOANS, next);
+        return next;
+      });
       showToast('লোনের তথ্য আপডেট করা হয়েছে');
     } else {
       const newLoan: LoanRecord = {
@@ -332,16 +468,40 @@ export default function App() {
         status: 'pending',
         createdAt: Date.now(),
       };
-      setLoans((prev) => [newLoan, ...prev]);
+      setLoans((prev) => {
+        const next = [newLoan, ...prev];
+        setStoredItem(STORAGE_KEYS.LOANS, next);
+        return next;
+      });
       showToast('নতুন লোন রেকর্ড যুক্ত হয়েছে');
     }
     setIsLoanModalOpen(false);
     setEditingLoan(null);
   };
 
-  const handleDeleteLoan = (id: string) => {
-    setLoans((prev) => prev.filter((l) => l.id !== id));
+  const executeDeleteLoan = (id: string) => {
+    setLoans((prev) => {
+      const next = prev.filter((l) => l.id !== id);
+      setStoredItem(STORAGE_KEYS.LOANS, next);
+      return next;
+    });
     showToast('লোনের হিসাব মুছে ফেলা হয়েছে');
+  };
+
+  const handleDeleteLoan = (id: string) => {
+    const loan = loans.find((l) => l.id === id);
+    setConfirmModal({
+      isOpen: true,
+      title: 'লোনের হিসাব মুছে ফেলবেন?',
+      message: `আপনি কি "${loan?.personName || 'এই'}" এর দেনা/পাওনার হিসাবটি মুছে ফেলতে চান?`,
+      confirmText: 'হ্যাঁ, মুছুন',
+      cancelText: 'বাতিল',
+      isDangerous: true,
+      onConfirm: () => {
+        executeDeleteLoan(id);
+        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+      },
+    });
   };
 
   const handleOpenAddPayment = (loan: LoanRecord) => {
@@ -355,8 +515,8 @@ export default function App() {
     date: string,
     note?: string
   ) => {
-    setLoans((prev) =>
-      prev.map((loan) => {
+    setLoans((prev) => {
+      const next = prev.map((loan) => {
         if (loan.id === loanId) {
           const newPayments = [
             ...loan.payments,
@@ -382,21 +542,24 @@ export default function App() {
           };
         }
         return loan;
-      })
-    );
+      });
+      setStoredItem(STORAGE_KEYS.LOANS, next);
+      return next;
+    });
     showToast('পরিশোধ সফলভাবে সংরক্ষণ করা হয়েছে');
   };
 
   // Profile Update Handler
   const handleUpdateProfile = (updatedProfile: UserProfile) => {
     setProfile(updatedProfile);
+    setStoredItem(STORAGE_KEYS.PROFILE, updatedProfile);
     showToast('প্রোফাইল তথ্য আপডেট করা হয়েছে');
   };
 
   // Export Data Handler
   const handleExportData = () => {
     const dataToExport = {
-      version: '2.1',
+      version: '3.0',
       appName: 'Hishab Khata Expense & Loan Tracker',
       exportedAt: new Date().toISOString(),
       profile,
@@ -406,7 +569,9 @@ export default function App() {
       loans,
     };
 
-    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(dataToExport, null, 2));
+    const dataStr =
+      'data:text/json;charset=utf-8,' +
+      encodeURIComponent(JSON.stringify(dataToExport, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute('href', dataStr);
     downloadAnchor.setAttribute(
@@ -430,41 +595,73 @@ export default function App() {
   }) => {
     if (data.expenses && Array.isArray(data.expenses)) {
       setExpenses(data.expenses);
+      setStoredItem(STORAGE_KEYS.EXPENSES, data.expenses);
     }
     if (data.categories && Array.isArray(data.categories)) {
       setCategories(data.categories);
+      setStoredItem(STORAGE_KEYS.CATEGORIES, data.categories);
     }
     if (data.paymentSources && Array.isArray(data.paymentSources)) {
       setPaymentSources(data.paymentSources);
+      setStoredItem(STORAGE_KEYS.SOURCES, data.paymentSources);
     }
     if (data.loans && Array.isArray(data.loans)) {
       setLoans(data.loans);
+      setStoredItem(STORAGE_KEYS.LOANS, data.loans);
     }
     if (data.profile && typeof data.profile === 'object') {
       setProfile(data.profile);
+      setStoredItem(STORAGE_KEYS.PROFILE, data.profile);
     }
     showToast('পুরনো ডাটা সফলভাবে রিস্টোর করা হয়েছে!');
   };
 
-  // Reset to initial demo data
-  const handleResetData = () => {
-    if (
-      window.confirm(
-        'আপনি কি হিসাব খাতা ডেমো ডাটায় রিসেট করতে চান? আপনার বর্তমান সমস্ত খরচ ও লোনের রেকর্ড মুছে যাবে।'
-      )
-    ) {
-      localStorage.removeItem(STORAGE_KEYS.EXPENSES);
-      localStorage.removeItem(STORAGE_KEYS.CATEGORIES);
-      localStorage.removeItem(STORAGE_KEYS.SOURCES);
-      localStorage.removeItem(STORAGE_KEYS.LOANS);
-      localStorage.removeItem(STORAGE_KEYS.PROFILE);
-      setExpenses(getInitialExpenses());
-      setCategories(DEFAULT_CATEGORIES);
-      setPaymentSources(DEFAULT_PAYMENT_SOURCES);
-      setLoans(getInitialLoans());
-      setProfile(DEFAULT_USER_PROFILE);
-      showToast('অ্যাপ প্রাথমিক ডাটায় রিসেট করা হয়েছে');
-    }
+  // Clear all data (Start completely fresh with clean account)
+  const handleClearAllData = () => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'সমস্ত হিসাব সাফ করবেন?',
+      message:
+        'আপনার বর্তমান সমস্ত খরচ ও লোনের রেকর্ড মুছে যাবে। আপনি কি সম্পূর্ণ নতুন ও পরিষ্কার হিসাব খাতা তৈরি করতে চান?',
+      confirmText: 'হ্যাঁ, সব সাফ করুন',
+      cancelText: 'বাতিল',
+      isDangerous: true,
+      onConfirm: () => {
+        setExpenses([]);
+        setLoans([]);
+        setStoredItem(STORAGE_KEYS.EXPENSES, []);
+        setStoredItem(STORAGE_KEYS.LOANS, []);
+        setStoredItem(STORAGE_KEYS.INITIALIZED, true);
+        showToast('সমস্ত হিসাব সাফ করা হয়েছে! খাতা এখন সম্পূর্ণ পরিষ্কার।');
+        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+        setIsProfileModalOpen(false);
+      },
+    });
+  };
+
+  // Load sample demo data if explicitly requested
+  const handleLoadDemoData = () => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'নমুনা ডাটা যোগ করবেন?',
+      message:
+        'হিসাব খাতা বোঝার সুবিধার্থে কিছু নমুনা খরচ ও লোনের তথ্য যোগ করা হবে।',
+      confirmText: 'নমুনা ডাটা যোগ করুন',
+      cancelText: 'বাতিল',
+      isDangerous: false,
+      onConfirm: () => {
+        const demoExp = getInitialExpenses();
+        const demoLoans = getInitialLoans();
+        setExpenses(demoExp);
+        setLoans(demoLoans);
+        setStoredItem(STORAGE_KEYS.EXPENSES, demoExp);
+        setStoredItem(STORAGE_KEYS.LOANS, demoLoans);
+        setStoredItem(STORAGE_KEYS.INITIALIZED, true);
+        showToast('নমুনা ডাটা সফলভাবে যোগ করা হয়েছে!');
+        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+        setIsProfileModalOpen(false);
+      },
+    });
   };
 
   return (
@@ -474,11 +671,11 @@ export default function App() {
       onOpenAddExpense={handleOpenAddExpense}
       onOpenProfile={() => setIsProfileModalOpen(true)}
       profileName={profile.name}
-      onResetData={handleResetData}
+      onResetData={handleClearAllData}
     >
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-slate-900/90 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg border border-slate-700 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-slate-900/90 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg border border-slate-700 animate-in fade-in slide-in-from-top-2 duration-200 pointer-events-none">
           {toastMessage}
         </div>
       )}
@@ -614,7 +811,21 @@ export default function App() {
         loans={loans}
         onExportData={handleExportData}
         onImportData={handleImportData}
-        onResetData={handleResetData}
+        onResetData={handleClearAllData}
+        onClearAllData={handleClearAllData}
+        onLoadDemoData={handleLoadDemoData}
+      />
+
+      {/* In-app Confirmation Dialog (Never blocked by browser) */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText={confirmModal.confirmText}
+        cancelText={confirmModal.cancelText}
+        isDangerous={confirmModal.isDangerous}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
       />
     </AndroidFrame>
   );

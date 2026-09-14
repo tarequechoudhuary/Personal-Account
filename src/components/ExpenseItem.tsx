@@ -115,11 +115,7 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({
             </button>
             <button
               id={`btn-delete-expense-${expense.id}`}
-              onClick={() => {
-                if (window.confirm(`আপনি কি "${expense.title}" খরচের হিসাবটি মুছে ফেলতে চান?`)) {
-                  onDelete(expense.id);
-                }
-              }}
+              onClick={() => onDelete(expense.id)}
               className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
               title="মুছে ফেলুন"
               aria-label="Delete Expense"
