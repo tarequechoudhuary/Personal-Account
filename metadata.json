@@ -1,0 +1,6 @@
+{
+  "name": "হিসাব খাতা - Expense Tracker",
+  "description": "দৈনিক খরচের হিসাব, ক্যাশ ও ব্যাংক লেনদেন, দেনা-পাওনা ও লোন ট্র্যাকিং এবং প্রোফাইল ভিত্তিক অফলাইন ডাটা ব্যাকআপের আধুনিক অ্যান্ড্রয়েড অ্যাপ।",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
