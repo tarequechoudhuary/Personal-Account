@@ -236,6 +236,9 @@ export const getInitialExpenses = (): Expense[] => {
   const [yearStr, monthStr] = today.split('-');
   const y = yearStr;
   const m = monthStr;
+  const prevDate = new Date(Number(y), Number(m) - 2, 1);
+  const py = prevDate.getFullYear();
+  const pm = String(prevDate.getMonth() + 1).padStart(2, '0');
   
   return [
     {
@@ -325,6 +328,152 @@ export const getInitialExpenses = (): Expense[] => {
       paymentSourceId: 'src-bkash',
       note: 'ডেসকো পোস্টপেইড বিদ্যুৎ বিল',
       createdAt: Date.now() - 86400000 * 7,
+    },
+    // --- বিগত মাসের কিছু নমুনা খরচ (খাতভিত্তিক তুলনার জন্য) ---
+    {
+      id: 'exp-prev-1',
+      title: 'বিগত মাসের বাড়ি ভাড়া',
+      amount: 16000,
+      date: `${py}-${pm}-02`,
+      time: '11:00',
+      categoryId: 'cat-sub-rent',
+      paymentSourceId: 'src-brac',
+      note: 'বিগত মাসের বাসা ভাড়া',
+      createdAt: Date.now() - 86400000 * 35,
+    },
+    {
+      id: 'exp-prev-2',
+      title: 'বিগত মাসের কাঁচাবাজার ও সদাই',
+      amount: 6200,
+      date: `${py}-${pm}-08`,
+      time: '17:30',
+      categoryId: 'cat-sub-grocery',
+      paymentSourceId: 'src-cash',
+      note: 'মাসের চাল, ডাল ও তেল কেনা',
+      createdAt: Date.now() - 86400000 * 32,
+    },
+    {
+      id: 'exp-prev-3',
+      title: 'বিগত মাসের বিদ্যুৎ ও গ্যাস বিল',
+      amount: 2400,
+      date: `${py}-${pm}-12`,
+      time: '15:10',
+      categoryId: 'cat-sub-utility',
+      paymentSourceId: 'src-bkash',
+      note: 'বিদ্যুৎ ও প্রিপেইড গ্যাস বিল',
+      createdAt: Date.now() - 86400000 * 30,
+    },
+    {
+      id: 'exp-prev-4',
+      title: 'বিগত মাসের যাতায়াত ও জ্বালানি',
+      amount: 1800,
+      date: `${py}-${pm}-15`,
+      time: '12:00',
+      categoryId: 'cat-sub-transport',
+      paymentSourceId: 'src-cash',
+      note: 'অফিস যাতায়াতের খরচ',
+      createdAt: Date.now() - 86400000 * 27,
+    },
+    {
+      id: 'exp-prev-5',
+      title: 'ডাক্তারের ফি ও ওষুধ',
+      amount: 1200,
+      date: `${py}-${pm}-18`,
+      time: '19:00',
+      categoryId: 'cat-sub-health',
+      paymentSourceId: 'src-dbbl',
+      note: 'ডাক্তার দেখানো ও টেস্ট',
+      createdAt: Date.now() - 86400000 * 25,
+    },
+    {
+      id: 'exp-prev-6',
+      title: 'মোবাইল রিচার্জ ও ওয়াইফাই',
+      amount: 800,
+      date: `${py}-${pm}-20`,
+      time: '14:30',
+      categoryId: 'cat-sub-mobile',
+      paymentSourceId: 'src-bkash',
+      note: 'ইন্টারনেট বিল',
+      createdAt: Date.now() - 86400000 * 22,
+    },
+  ];
+};
+
+export const getInitialIncomes = (): Income[] => {
+  const today = getCurrentDateString();
+  const [y, m] = today.split('-');
+  const prevDate = new Date(Number(y), Number(m) - 2, 1);
+  const py = prevDate.getFullYear();
+  const pm = String(prevDate.getMonth() + 1).padStart(2, '0');
+
+  return [
+    // বিগত মাসের আয়
+    {
+      id: 'inc-prev-1',
+      title: 'গত মাসের বেতন (Salary)',
+      amount: 45000,
+      date: `${py}-${pm}-01`,
+      time: '10:00',
+      categoryId: 'inc-cat-salary',
+      paymentSourceId: 'src-brac',
+      note: 'অফিস বেতন ব্র্যাক ব্যাংকে ক্রেডিট',
+      createdAt: Date.now() - 86400000 * 36,
+    },
+    {
+      id: 'inc-prev-2',
+      title: 'ফ্রিল্যান্সিং পেমেন্ট',
+      amount: 12000,
+      date: `${py}-${pm}-14`,
+      time: '16:00',
+      categoryId: 'inc-cat-freelance',
+      paymentSourceId: 'src-dbbl',
+      note: 'ওয়েব ডেভেলপমেন্ট প্রজেক্টের টাকা',
+      createdAt: Date.now() - 86400000 * 26,
+    },
+    {
+      id: 'inc-prev-3',
+      title: 'ক্যাশ জমা ও অন্যান্য',
+      amount: 5000,
+      date: `${py}-${pm}-22`,
+      time: '18:00',
+      categoryId: 'inc-cat-other',
+      paymentSourceId: 'src-cash',
+      note: 'ক্যাশ হাতখরচ জমা',
+      createdAt: Date.now() - 86400000 * 20,
+    },
+    // চলতি মাসের আয়
+    {
+      id: 'inc-curr-1',
+      title: 'চলতি মাসের বেতন (Salary)',
+      amount: 50000,
+      date: `${y}-${m}-01`,
+      time: '10:30',
+      categoryId: 'inc-cat-salary',
+      paymentSourceId: 'src-brac',
+      note: 'ইনক্রিমেন্ট সহ মূল বেতন জমা',
+      createdAt: Date.now() - 86400000 * 9,
+    },
+    {
+      id: 'inc-curr-2',
+      title: 'দোকান বা ব্যবসা থেকে আয়',
+      amount: 15000,
+      date: `${y}-${m}-07`,
+      time: '19:00',
+      categoryId: 'inc-cat-business',
+      paymentSourceId: 'src-bkash',
+      note: 'বিকাশ মারচেন্টে বিক্রির টাকা',
+      createdAt: Date.now() - 86400000 * 4,
+    },
+    {
+      id: 'inc-curr-3',
+      title: 'উপহার / বোনাস',
+      amount: 5000,
+      date: `${y}-${m}-11`,
+      time: '14:00',
+      categoryId: 'inc-cat-bonus',
+      paymentSourceId: 'src-dbbl',
+      note: 'উৎসব বোনাস',
+      createdAt: Date.now() - 86400000 * 1,
     },
   ];
 };

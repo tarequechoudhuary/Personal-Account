@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Plus,
   Landmark,
@@ -11,9 +11,12 @@ import {
   ArrowRight,
   ArrowDownLeft,
   Wallet,
+  Scale,
+  ArrowUpRight,
+  ArrowDownRight,
 } from 'lucide-react';
 import { PaymentSource, Expense, ExpenseCategory, PaymentType, Income, IncomeCategory } from '../types';
-import { formatCurrency, toBengaliNumber } from '../utils/formatters';
+import { formatCurrency, toBengaliNumber, BENGALI_MONTHS } from '../utils/formatters';
 import { ExpenseItem } from './ExpenseItem';
 import { IncomeItem } from './IncomeItem';
 
@@ -104,6 +107,49 @@ export const BanksView: React.FC<BanksViewProps> = ({
     return { expCount, incCount, total: expCount + incCount };
   };
 
+  // Current & Previous Month Balance Calculations
+  const today = new Date();
+  const currYear = today.getFullYear();
+  const currMonth = today.getMonth() + 1;
+
+  const prevMonthDate = new Date(currYear, currMonth - 2, 1);
+  const prevYear = prevMonthDate.getFullYear();
+  const prevMonth = prevMonthDate.getMonth() + 1;
+  const prevLastDay = new Date(prevYear, prevMonth, 0).getDate();
+  const prevCutoff = `${prevYear}-${String(prevMonth).padStart(2, '0')}-${String(prevLastDay).padStart(2, '0')}`;
+
+  const currLastDay = new Date(currYear, currMonth, 0).getDate();
+  const currCutoff = `${currYear}-${String(currMonth).padStart(2, '0')}-${String(currLastDay).padStart(2, '0')}`;
+
+  const prevMonthLabel = `${BENGALI_MONTHS[prevMonth - 1]} ${toBengaliNumber(prevYear)}`;
+  const currMonthLabel = `${BENGALI_MONTHS[currMonth - 1]} ${toBengaliNumber(currYear)}`;
+
+  // Total balance across ALL accounts up to last month end vs this month
+  const lastMonthTotalAllBalances = useMemo(() => {
+    const inc = incomes.filter((i) => i.date <= prevCutoff).reduce((s, i) => s + i.amount, 0);
+    const exp = expenses.filter((e) => e.date <= prevCutoff).reduce((s, e) => s + e.amount, 0);
+    return inc - exp;
+  }, [incomes, expenses, prevCutoff]);
+
+  const thisMonthTotalAllBalances = useMemo(() => {
+    const inc = incomes.filter((i) => i.date <= currCutoff).reduce((s, i) => s + i.amount, 0);
+    const exp = expenses.filter((e) => e.date <= currCutoff).reduce((s, e) => s + e.amount, 0);
+    return inc - exp;
+  }, [incomes, expenses, currCutoff]);
+
+  const totalBalanceDiff = thisMonthTotalAllBalances - lastMonthTotalAllBalances;
+
+  // Function to get balance at previous month end for a single source
+  const getSourcePrevMonthBalance = (sourceId: string) => {
+    const inc = incomes
+      .filter((i) => i.paymentSourceId === sourceId && i.date <= prevCutoff)
+      .reduce((s, i) => s + i.amount, 0);
+    const exp = expenses
+      .filter((e) => e.paymentSourceId === sourceId && e.date <= prevCutoff)
+      .reduce((s, e) => s + e.amount, 0);
+    return inc - exp;
+  };
+
   // Currently selected source for viewing individual statement
   const selectedSource = paymentSources.find((s) => s.id === selectedSourceId);
   const selectedSourceExpenses = selectedSourceId
@@ -160,6 +206,62 @@ export const BanksView: React.FC<BanksViewProps> = ({
           <Plus className="w-4 h-4" />
           <span>নতুন ব্যাংক যোগ</span>
         </button>
+      </div>
+
+      {/* Month-over-Month Combined Balance Banner */}
+      <div className="bg-linear-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-4 shadow-lg space-y-3 relative overflow-hidden">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-emerald-500/20 text-emerald-300 rounded-xl border border-emerald-500/30">
+              <Scale className="w-4 h-4" />
+            </div>
+            <div>
+              <h4 className="text-xs font-bold text-white">
+                সব একাউন্ট মিলে মাসিক ব্যালেন্স তুলনা
+              </h4>
+              <p className="text-[10px] text-slate-400">
+                গত মাস বনাম এই মাসের মোট ব্যালেন্সের পরিবর্তন
+              </p>
+            </div>
+          </div>
+          <span
+            className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 ${
+              totalBalanceDiff >= 0
+                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+            }`}
+          >
+            {totalBalanceDiff >= 0 ? (
+              <ArrowUpRight className="w-3 h-3 stroke-[2.5]" />
+            ) : (
+              <ArrowDownRight className="w-3 h-3 stroke-[2.5]" />
+            )}
+            <span>
+              {totalBalanceDiff >= 0 ? '+' : ''}
+              {formatCurrency(totalBalanceDiff)}
+            </span>
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          <div className="bg-white/10 rounded-2xl p-2.5 border border-white/10">
+            <span className="text-[10px] text-slate-300 block font-medium">
+              {prevMonthLabel}-এর শেষ ব্যালেন্স:
+            </span>
+            <span className="font-extrabold text-white text-sm sm:text-base mt-0.5 block truncate">
+              {formatCurrency(lastMonthTotalAllBalances)}
+            </span>
+          </div>
+
+          <div className="bg-white/15 rounded-2xl p-2.5 border border-emerald-500/30">
+            <span className="text-[10px] text-emerald-200 block font-medium">
+              {currMonthLabel}-এর বর্তমান ব্যালেন্স:
+            </span>
+            <span className="font-extrabold text-emerald-300 text-sm sm:text-base mt-0.5 block truncate">
+              {formatCurrency(thisMonthTotalAllBalances)}
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Type Filter Buttons */}
@@ -326,6 +428,35 @@ export const BanksView: React.FC<BanksViewProps> = ({
                   </span>
                 </div>
               </div>
+
+              {/* Month-over-Month Comparison row for this account */}
+              {(() => {
+                const prevBal = getSourcePrevMonthBalance(source.id);
+                const diffBal = balance - prevBal;
+                const isInc = diffBal >= 0;
+                return (
+                  <div className="mt-2 bg-slate-50/90 p-2 rounded-xl text-[11px] flex items-center justify-between border border-slate-100">
+                    <span className="text-slate-500">
+                      গত মাসে ছিল: <strong>{formatCurrency(prevBal)}</strong>
+                    </span>
+                    <span
+                      className={`font-extrabold flex items-center gap-0.5 ${
+                        isInc ? 'text-emerald-700' : 'text-rose-600'
+                      }`}
+                    >
+                      {isInc ? (
+                        <ArrowUpRight className="w-3 h-3 stroke-[2.5]" />
+                      ) : (
+                        <ArrowDownRight className="w-3 h-3 stroke-[2.5]" />
+                      )}
+                      <span>
+                        {isInc ? '+' : ''}
+                        {formatCurrency(diffBal)}
+                      </span>
+                    </span>
+                  </div>
+                );
+              })()}
 
               {/* Click to filter note */}
               <div className="mt-2.5 text-[10px] text-indigo-600 font-semibold flex items-center justify-between">

@@ -6,13 +6,17 @@ import {
   PaymentSource,
   LoanRecord,
   UserProfile,
+  Income,
+  IncomeCategory,
 } from './types';
 import {
   DEFAULT_CATEGORIES,
+  DEFAULT_INCOME_CATEGORIES,
   DEFAULT_PAYMENT_SOURCES,
   DEFAULT_USER_PROFILE,
   getInitialExpenses,
   getInitialLoans,
+  getInitialIncomes,
 } from './data/initialData';
 import { AndroidFrame } from './components/AndroidFrame';
 import { DailyView } from './components/DailyView';
@@ -21,6 +25,7 @@ import { LoansView } from './components/LoansView';
 import { BanksView } from './components/BanksView';
 import { CategoriesView } from './components/CategoriesView';
 import { AddExpenseModal } from './components/AddExpenseModal';
+import { AddIncomeModal } from './components/AddIncomeModal';
 import { AddBankModal } from './components/AddBankModal';
 import { AddCategoryModal } from './components/AddCategoryModal';
 import { AddLoanModal } from './components/AddLoanModal';
@@ -139,6 +144,27 @@ export default function App() {
     return DEFAULT_USER_PROFILE;
   });
 
+  // Load incomes (টাকা জমা / আয়) with initial demonstration data
+  const [incomes, setIncomes] = useState<Income[]>(() => {
+    const v3Saved = getStoredItem<Income[] | null>(STORAGE_KEYS.INCOMES, null);
+    if (v3Saved !== null && Array.isArray(v3Saved)) {
+      return v3Saved;
+    }
+    const initials = getInitialIncomes();
+    setStoredItem(STORAGE_KEYS.INCOMES, initials);
+    return initials;
+  });
+
+  // Load income categories
+  const [incomeCategories, setIncomeCategories] = useState<IncomeCategory[]>(() => {
+    const v3Saved = getStoredItem<IncomeCategory[] | null>(STORAGE_KEYS.INCOME_CATEGORIES, null);
+    if (v3Saved !== null && Array.isArray(v3Saved)) {
+      return v3Saved;
+    }
+    setStoredItem(STORAGE_KEYS.INCOME_CATEGORIES, DEFAULT_INCOME_CATEGORIES);
+    return DEFAULT_INCOME_CATEGORIES;
+  });
+
   const [activeTab, setActiveTab] = useState<ActiveTab>('daily');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -162,6 +188,10 @@ export default function App() {
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
 
+  const [isIncomeModalOpen, setIsIncomeModalOpen] = useState(false);
+  const [editingIncome, setEditingIncome] = useState<Income | null>(null);
+  const [incomeDefaultSourceId, setIncomeDefaultSourceId] = useState<string | null>(null);
+
   const [isBankModalOpen, setIsBankModalOpen] = useState(false);
   const [editingBank, setEditingBank] = useState<PaymentSource | null>(null);
 
@@ -181,6 +211,14 @@ export default function App() {
   useEffect(() => {
     setStoredItem(STORAGE_KEYS.EXPENSES, expenses);
   }, [expenses]);
+
+  useEffect(() => {
+    setStoredItem(STORAGE_KEYS.INCOMES, incomes);
+  }, [incomes]);
+
+  useEffect(() => {
+    setStoredItem(STORAGE_KEYS.INCOME_CATEGORIES, incomeCategories);
+  }, [incomeCategories]);
 
   useEffect(() => {
     setStoredItem(STORAGE_KEYS.CATEGORIES, categories);
@@ -203,6 +241,76 @@ export default function App() {
     setTimeout(() => {
       setToastMessage(null);
     }, 2800);
+  };
+
+  // Income Handlers
+  const handleOpenAddIncome = (defaultSourceId?: string) => {
+    setEditingIncome(null);
+    setIncomeDefaultSourceId(defaultSourceId || null);
+    setIsIncomeModalOpen(true);
+  };
+
+  const handleEditIncome = (income: Income) => {
+    setEditingIncome(income);
+    setIncomeDefaultSourceId(income.paymentSourceId);
+    setIsIncomeModalOpen(true);
+  };
+
+  const handleSaveIncome = (
+    incomeData: Omit<Income, 'id' | 'createdAt'>,
+    id?: string
+  ) => {
+    if (id) {
+      setIncomes((prev) => {
+        const next = prev.map((item) =>
+          item.id === id ? { ...item, ...incomeData } : item
+        );
+        setStoredItem(STORAGE_KEYS.INCOMES, next);
+        return next;
+      });
+      showToast('টাকা জমা/আয় সফলভাবে আপডেট করা হয়েছে');
+    } else {
+      const newIncome: Income = {
+        ...incomeData,
+        id: `inc-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        createdAt: Date.now(),
+      };
+      setIncomes((prev) => {
+        const next = [newIncome, ...prev];
+        setStoredItem(STORAGE_KEYS.INCOMES, next);
+        return next;
+      });
+      showToast('টাকা জমা/আয় যোগ করা হয়েছে');
+    }
+    setIsIncomeModalOpen(false);
+    setEditingIncome(null);
+    setIncomeDefaultSourceId(null);
+  };
+
+  const executeDeleteIncome = (id: string) => {
+    setIncomes((prev) => {
+      const next = prev.filter((item) => item.id !== id);
+      setStoredItem(STORAGE_KEYS.INCOMES, next);
+      return next;
+    });
+    showToast('জমা হিসাবটি মুছে ফেলা হয়েছে');
+  };
+
+  const handleDeleteIncome = (id: string) => {
+    const item = incomes.find((i) => i.id === id);
+    const title = item ? item.title : 'এই হিসাবটি';
+    setConfirmModal({
+      isOpen: true,
+      title: 'জমা হিসাব মুছে ফেলতে চান?',
+      message: `আপনি কি "${title}" জমার হিসাবটি মুছে ফেলতে চান?`,
+      confirmText: 'হ্যাঁ, মুছুন',
+      cancelText: 'বাতিল',
+      isDangerous: true,
+      onConfirm: () => {
+        executeDeleteIncome(id);
+        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+      },
+    });
   };
 
   // Expense Handlers
@@ -564,7 +672,9 @@ export default function App() {
       exportedAt: new Date().toISOString(),
       profile,
       expenses,
+      incomes,
       categories,
+      incomeCategories,
       paymentSources,
       loans,
     };
@@ -588,7 +698,9 @@ export default function App() {
   // Import Data Handler
   const handleImportData = (data: {
     expenses?: Expense[];
+    incomes?: Income[];
     categories?: ExpenseCategory[];
+    incomeCategories?: IncomeCategory[];
     paymentSources?: PaymentSource[];
     loans?: LoanRecord[];
     profile?: UserProfile;
@@ -597,9 +709,17 @@ export default function App() {
       setExpenses(data.expenses);
       setStoredItem(STORAGE_KEYS.EXPENSES, data.expenses);
     }
+    if (data.incomes && Array.isArray(data.incomes)) {
+      setIncomes(data.incomes);
+      setStoredItem(STORAGE_KEYS.INCOMES, data.incomes);
+    }
     if (data.categories && Array.isArray(data.categories)) {
       setCategories(data.categories);
       setStoredItem(STORAGE_KEYS.CATEGORIES, data.categories);
+    }
+    if (data.incomeCategories && Array.isArray(data.incomeCategories)) {
+      setIncomeCategories(data.incomeCategories);
+      setStoredItem(STORAGE_KEYS.INCOME_CATEGORIES, data.incomeCategories);
     }
     if (data.paymentSources && Array.isArray(data.paymentSources)) {
       setPaymentSources(data.paymentSources);
@@ -628,8 +748,10 @@ export default function App() {
       isDangerous: true,
       onConfirm: () => {
         setExpenses([]);
+        setIncomes([]);
         setLoans([]);
         setStoredItem(STORAGE_KEYS.EXPENSES, []);
+        setStoredItem(STORAGE_KEYS.INCOMES, []);
         setStoredItem(STORAGE_KEYS.LOANS, []);
         setStoredItem(STORAGE_KEYS.INITIALIZED, true);
         showToast('সমস্ত হিসাব সাফ করা হয়েছে! খাতা এখন সম্পূর্ণ পরিষ্কার।');
@@ -645,16 +767,19 @@ export default function App() {
       isOpen: true,
       title: 'নমুনা ডাটা যোগ করবেন?',
       message:
-        'হিসাব খাতা বোঝার সুবিধার্থে কিছু নমুনা খরচ ও লোনের তথ্য যোগ করা হবে।',
+        'হিসাব খাতা বোঝার সুবিধার্থে কিছু নমুনা খরচ, জমা ও লোনের তথ্য যোগ করা হবে।',
       confirmText: 'নমুনা ডাটা যোগ করুন',
       cancelText: 'বাতিল',
       isDangerous: false,
       onConfirm: () => {
         const demoExp = getInitialExpenses();
         const demoLoans = getInitialLoans();
+        const demoIncomes = getInitialIncomes();
         setExpenses(demoExp);
+        setIncomes(demoIncomes);
         setLoans(demoLoans);
         setStoredItem(STORAGE_KEYS.EXPENSES, demoExp);
+        setStoredItem(STORAGE_KEYS.INCOMES, demoIncomes);
         setStoredItem(STORAGE_KEYS.LOANS, demoLoans);
         setStoredItem(STORAGE_KEYS.INITIALIZED, true);
         showToast('নমুনা ডাটা সফলভাবে যোগ করা হয়েছে!');
@@ -669,6 +794,7 @@ export default function App() {
       activeTab={activeTab}
       onTabChange={setActiveTab}
       onOpenAddExpense={handleOpenAddExpense}
+      onOpenAddIncome={handleOpenAddIncome}
       onOpenProfile={() => setIsProfileModalOpen(true)}
       profileName={profile.name}
       onResetData={handleClearAllData}
@@ -684,21 +810,30 @@ export default function App() {
       {activeTab === 'daily' && (
         <DailyView
           expenses={expenses}
+          incomes={incomes}
           categories={categories}
+          incomeCategories={incomeCategories}
           paymentSources={paymentSources}
           onAddExpense={handleOpenAddExpense}
+          onAddIncome={handleOpenAddIncome}
           onEditExpense={handleEditExpense}
           onDeleteExpense={handleDeleteExpense}
+          onEditIncome={handleEditIncome}
+          onDeleteIncome={handleDeleteIncome}
         />
       )}
 
       {activeTab === 'monthly' && (
         <MonthlyView
           expenses={expenses}
+          incomes={incomes}
           categories={categories}
+          incomeCategories={incomeCategories}
           paymentSources={paymentSources}
           onEditExpense={handleEditExpense}
           onDeleteExpense={handleDeleteExpense}
+          onEditIncome={handleEditIncome}
+          onDeleteIncome={handleDeleteIncome}
         />
       )}
 
@@ -717,12 +852,17 @@ export default function App() {
         <BanksView
           paymentSources={paymentSources}
           expenses={expenses}
+          incomes={incomes}
           categories={categories}
+          incomeCategories={incomeCategories}
           onAddBank={handleOpenAddBank}
           onEditBank={handleEditBank}
           onDeleteBank={handleDeleteBank}
           onEditExpense={handleEditExpense}
           onDeleteExpense={handleDeleteExpense}
+          onAddIncomeForSource={(sourceId) => handleOpenAddIncome(sourceId)}
+          onEditIncome={handleEditIncome}
+          onDeleteIncome={handleDeleteIncome}
         />
       )}
 
@@ -752,6 +892,29 @@ export default function App() {
         onOpenAddCategory={(defaultParentId) => handleOpenAddCategory(defaultParentId)}
         onOpenAddBank={() => setIsBankModalOpen(true)}
         editingExpense={editingExpense}
+        onSwitchToIncome={() => {
+          setIsExpenseModalOpen(false);
+          handleOpenAddIncome();
+        }}
+      />
+
+      <AddIncomeModal
+        isOpen={isIncomeModalOpen}
+        onClose={() => {
+          setIsIncomeModalOpen(false);
+          setEditingIncome(null);
+          setIncomeDefaultSourceId(null);
+        }}
+        onSave={handleSaveIncome}
+        paymentSources={paymentSources}
+        incomeCategories={incomeCategories}
+        onOpenAddBank={() => setIsBankModalOpen(true)}
+        editingIncome={editingIncome}
+        defaultSourceId={incomeDefaultSourceId || undefined}
+        onSwitchToExpense={() => {
+          setIsIncomeModalOpen(false);
+          handleOpenAddExpense();
+        }}
       />
 
       <AddBankModal
@@ -789,6 +952,7 @@ export default function App() {
         editingLoan={editingLoan}
       />
 
+      {/* Loan Payment Modal */}
       <AddLoanPaymentModal
         isOpen={isLoanPaymentModalOpen}
         onClose={() => {
@@ -806,6 +970,7 @@ export default function App() {
         profile={profile}
         onUpdateProfile={handleUpdateProfile}
         expenses={expenses}
+        incomes={incomes}
         categories={categories}
         paymentSources={paymentSources}
         loans={loans}

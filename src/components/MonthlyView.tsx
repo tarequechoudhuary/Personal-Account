@@ -12,6 +12,10 @@ import {
   ArrowDownLeft,
   Wallet,
   TrendingDown,
+  Scale,
+  ArrowUpRight,
+  ArrowDownRight,
+  ArrowRight,
 } from 'lucide-react';
 import { Expense, ExpenseCategory, PaymentSource, Income, IncomeCategory } from '../types';
 import {
@@ -22,6 +26,7 @@ import {
 import { CategoryIcon } from './CategoryIcon';
 import { ExpenseItem } from './ExpenseItem';
 import { IncomeItem } from './IncomeItem';
+import { MonthlyComparisonView } from './MonthlyComparisonView';
 
 interface MonthlyViewProps {
   expenses: Expense[];
@@ -50,7 +55,7 @@ export const MonthlyView: React.FC<MonthlyViewProps> = ({
   const [selectedYear, setSelectedYear] = useState<number>(currentDate.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState<number>(currentDate.getMonth() + 1); // 1-12
   const [activeTab, setActiveTab] = useState<
-    'categories' | 'incomes' | 'sources' | 'daily' | 'list'
+    'categories' | 'incomes' | 'comparison' | 'sources' | 'daily' | 'list'
   >('categories');
   const [listFilter, setListFilter] = useState<'all' | 'expense' | 'income'>('all');
 
@@ -93,6 +98,47 @@ export const MonthlyView: React.FC<MonthlyViewProps> = ({
   }, [monthIncomes]);
 
   const netSavings = totalMonthIncome - totalMonthExpense;
+
+  // Previous month date calculations for comparison
+  const prevMonthDate = new Date(selectedYear, selectedMonth - 2, 1);
+  const prevYear = prevMonthDate.getFullYear();
+  const prevMonth = prevMonthDate.getMonth() + 1;
+  const prevLastDay = new Date(prevYear, prevMonth, 0).getDate();
+  const prevCutoff = `${prevYear}-${String(prevMonth).padStart(2, '0')}-${String(prevLastDay).padStart(2, '0')}`;
+
+  const currLastDay = new Date(selectedYear, selectedMonth, 0).getDate();
+  const currCutoff = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(currLastDay).padStart(2, '0')}`;
+
+  const prevTotalBalance = useMemo(() => {
+    const inc = incomes.filter((i) => i.date <= prevCutoff).reduce((s, i) => s + i.amount, 0);
+    const exp = expenses.filter((e) => e.date <= prevCutoff).reduce((s, e) => s + e.amount, 0);
+    return inc - exp;
+  }, [incomes, expenses, prevCutoff]);
+
+  const currTotalBalance = useMemo(() => {
+    const inc = incomes.filter((i) => i.date <= currCutoff).reduce((s, i) => s + i.amount, 0);
+    const exp = expenses.filter((e) => e.date <= currCutoff).reduce((s, e) => s + e.amount, 0);
+    return inc - exp;
+  }, [incomes, expenses, currCutoff]);
+
+  const balanceGrowth = currTotalBalance - prevTotalBalance;
+
+  // Category comparison summary counts between previous and current month
+  const prevPrefix = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+  const prevExpenses = useMemo(() => expenses.filter((e) => e.date.startsWith(prevPrefix)), [expenses, prevPrefix]);
+
+  const { catIncreasedCount, catDecreasedCount } = useMemo(() => {
+    let inc = 0;
+    let dec = 0;
+    categories.forEach((cat) => {
+      const p = prevExpenses.filter((e) => e.categoryId === cat.id).reduce((s, e) => s + e.amount, 0);
+      const c = monthExpenses.filter((e) => e.categoryId === cat.id).reduce((s, e) => s + e.amount, 0);
+      if (p === 0 && c === 0) return;
+      if (c > p) inc++;
+      else if (c < p) dec++;
+    });
+    return { catIncreasedCount: inc, catDecreasedCount: dec };
+  }, [categories, prevExpenses, monthExpenses]);
 
   // Hierarchical category breakdown for expenses
   const hierarchicalBreakdown = useMemo(() => {
@@ -393,11 +439,95 @@ export const MonthlyView: React.FC<MonthlyViewProps> = ({
         </div>
       </div>
 
+      {/* Month-over-Month Comparison Quick Banner */}
+      <div className="bg-white rounded-3xl p-4 border border-indigo-100 shadow-xs space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-indigo-50 text-indigo-700 rounded-xl">
+              <Scale className="w-4 h-4" />
+            </div>
+            <div>
+              <h4 className="text-xs font-extrabold text-slate-800">
+                গত মাস বনাম এই মাসের হিসাব তুলনা
+              </h4>
+              <p className="text-[10px] text-slate-500">
+                সব একাউন্টের ব্যালেন্স এবং খাতভিত্তিক খরচের হ্রাস-বৃদ্ধি
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setActiveTab('comparison')}
+            className="text-[11px] font-bold text-indigo-700 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-xl transition-all flex items-center gap-1 shrink-0 active:scale-95"
+          >
+            <span>বিস্তারিত দেখুন</span>
+            <ArrowRight className="w-3 h-3" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          {/* All Accounts Balance MoM */}
+          <div className="bg-slate-50 p-2.5 rounded-2xl border border-slate-100 space-y-1">
+            <span className="text-[10px] text-slate-500 block font-medium">
+              সব একাউন্ট মিলে মোট ব্যালেন্স:
+            </span>
+            <div className="flex items-baseline justify-between text-[11px]">
+              <span className="text-slate-400">গত মাসে:</span>
+              <span className="font-bold text-slate-600">{formatCurrency(prevTotalBalance)}</span>
+            </div>
+            <div className="flex items-baseline justify-between text-[11px]">
+              <span className="text-indigo-700 font-semibold">এই মাসে:</span>
+              <span className="font-extrabold text-indigo-950 text-xs">{formatCurrency(currTotalBalance)}</span>
+            </div>
+            <div
+              className={`text-[10px] font-bold pt-1 border-t border-slate-200/60 flex items-center justify-between ${
+                balanceGrowth >= 0 ? 'text-emerald-700' : 'text-rose-700'
+              }`}
+            >
+              <span className="flex items-center gap-0.5">
+                {balanceGrowth >= 0 ? (
+                  <ArrowUpRight className="w-3 h-3" />
+                ) : (
+                  <ArrowDownRight className="w-3 h-3" />
+                )}
+                <span>{balanceGrowth >= 0 ? 'ব্যালেন্স বৃদ্ধি' : 'ব্যালেন্স হ্রাস'}</span>
+              </span>
+              <span>
+                {balanceGrowth >= 0 ? '+' : ''}
+                {formatCurrency(balanceGrowth)}
+              </span>
+            </div>
+          </div>
+
+          {/* Category MoM Quick Summary */}
+          <div className="bg-slate-50 p-2.5 rounded-2xl border border-slate-100 flex flex-col justify-between">
+            <div>
+              <span className="text-[10px] text-slate-500 block font-medium">
+                খাতভিত্তিক খরচের স্থিতি:
+              </span>
+              <div className="mt-1 space-y-1 text-[11px]">
+                <div className="text-rose-700 font-semibold flex items-center gap-1">
+                  <ArrowUpRight className="w-3 h-3 text-rose-600 shrink-0" />
+                  <span>{toBengaliNumber(catIncreasedCount)} টি খাতে খরচ বেশি</span>
+                </div>
+                <div className="text-emerald-700 font-semibold flex items-center gap-1">
+                  <ArrowDownRight className="w-3 h-3 text-emerald-600 shrink-0" />
+                  <span>{toBengaliNumber(catDecreasedCount)} টি খাতে খরচ কম</span>
+                </div>
+              </div>
+            </div>
+            <div className="text-[10px] text-indigo-600 font-medium pt-1 border-t border-slate-200/60 flex items-center justify-between">
+              <span>খাতভিত্তিক বিশ্লেষণ</span>
+              <ArrowRight className="w-2.5 h-2.5" />
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Analytics Sub-tabs */}
       <div className="flex items-center bg-slate-200/70 p-1 rounded-2xl text-xs font-bold text-slate-600 overflow-x-auto">
         <button
           onClick={() => setActiveTab('categories')}
-          className={`flex-1 min-w-[75px] py-2 rounded-xl flex items-center justify-center gap-1 transition-all ${
+          className={`flex-1 min-w-[70px] py-2 rounded-xl flex items-center justify-center gap-1 transition-all ${
             activeTab === 'categories'
               ? 'bg-white text-indigo-700 shadow-xs'
               : 'hover:text-slate-900'
@@ -408,8 +538,20 @@ export const MonthlyView: React.FC<MonthlyViewProps> = ({
         </button>
 
         <button
-          onClick={() => setActiveTab('incomes')}
+          onClick={() => setActiveTab('comparison')}
           className={`flex-1 min-w-[75px] py-2 rounded-xl flex items-center justify-center gap-1 transition-all ${
+            activeTab === 'comparison'
+              ? 'bg-white text-indigo-700 shadow-xs'
+              : 'hover:text-slate-900'
+          }`}
+        >
+          <Scale className="w-3.5 h-3.5" />
+          <span>মাসের তুলনা</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('incomes')}
+          className={`flex-1 min-w-[70px] py-2 rounded-xl flex items-center justify-center gap-1 transition-all ${
             activeTab === 'incomes'
               ? 'bg-white text-emerald-700 shadow-xs'
               : 'hover:text-slate-900'
@@ -421,7 +563,7 @@ export const MonthlyView: React.FC<MonthlyViewProps> = ({
 
         <button
           onClick={() => setActiveTab('sources')}
-          className={`flex-1 min-w-[75px] py-2 rounded-xl flex items-center justify-center gap-1 transition-all ${
+          className={`flex-1 min-w-[70px] py-2 rounded-xl flex items-center justify-center gap-1 transition-all ${
             activeTab === 'sources'
               ? 'bg-white text-indigo-700 shadow-xs'
               : 'hover:text-slate-900'
@@ -433,7 +575,7 @@ export const MonthlyView: React.FC<MonthlyViewProps> = ({
 
         <button
           onClick={() => setActiveTab('daily')}
-          className={`flex-1 min-w-[75px] py-2 rounded-xl flex items-center justify-center gap-1 transition-all ${
+          className={`flex-1 min-w-[70px] py-2 rounded-xl flex items-center justify-center gap-1 transition-all ${
             activeTab === 'daily'
               ? 'bg-white text-indigo-700 shadow-xs'
               : 'hover:text-slate-900'
@@ -445,7 +587,7 @@ export const MonthlyView: React.FC<MonthlyViewProps> = ({
 
         <button
           onClick={() => setActiveTab('list')}
-          className={`flex-1 min-w-[75px] py-2 rounded-xl flex items-center justify-center gap-1 transition-all ${
+          className={`flex-1 min-w-[65px] py-2 rounded-xl flex items-center justify-center gap-1 transition-all ${
             activeTab === 'list'
               ? 'bg-white text-indigo-700 shadow-xs'
               : 'hover:text-slate-900'
@@ -455,6 +597,18 @@ export const MonthlyView: React.FC<MonthlyViewProps> = ({
           <span>লেনদেন</span>
         </button>
       </div>
+
+      {/* Tab: Comparison (মাসের তুলনা) */}
+      {activeTab === 'comparison' && (
+        <MonthlyComparisonView
+          expenses={expenses}
+          incomes={incomes}
+          categories={categories}
+          paymentSources={paymentSources}
+          currentYear={selectedYear}
+          currentMonth={selectedMonth}
+        />
+      )}
 
       {/* Tab 1: Category Breakdown (খরচ) */}
       {activeTab === 'categories' && (
