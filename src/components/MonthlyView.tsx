@@ -41,11 +41,11 @@ interface MonthlyViewProps {
 }
 
 export const MonthlyView: React.FC<MonthlyViewProps> = ({
-  expenses,
+  expenses = [],
   incomes = [],
-  categories,
+  categories = [],
   incomeCategories = [],
-  paymentSources,
+  paymentSources = [],
   onEditExpense,
   onDeleteExpense,
   onEditIncome,

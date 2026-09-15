@@ -30,9 +30,9 @@ interface BackupRestoreModalProps {
 export const BackupRestoreModal: React.FC<BackupRestoreModalProps> = ({
   isOpen,
   onClose,
-  expenses,
-  categories,
-  paymentSources,
+  expenses = [],
+  categories = [],
+  paymentSources = [],
   onImportData,
   onExportData,
 }) => {

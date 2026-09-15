@@ -34,9 +34,9 @@ interface CategoriesViewProps {
 }
 
 export const CategoriesView: React.FC<CategoriesViewProps> = ({
-  categories,
-  expenses,
-  paymentSources,
+  categories = [],
+  expenses = [],
+  paymentSources = [],
   onAddCategory,
   onEditCategory,
   onDeleteCategory,

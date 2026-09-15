@@ -36,10 +36,10 @@ interface MonthlyComparisonViewProps {
 }
 
 export const MonthlyComparisonView: React.FC<MonthlyComparisonViewProps> = ({
-  expenses,
-  incomes,
-  categories,
-  paymentSources,
+  expenses = [],
+  incomes = [],
+  categories = [],
+  paymentSources = [],
   currentYear,
   currentMonth,
 }) => {

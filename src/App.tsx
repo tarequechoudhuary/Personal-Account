@@ -908,6 +908,7 @@ export default function App() {
         onSave={handleSaveIncome}
         paymentSources={paymentSources}
         incomeCategories={incomeCategories}
+        categories={incomeCategories}
         onOpenAddBank={() => setIsBankModalOpen(true)}
         editingIncome={editingIncome}
         defaultSourceId={incomeDefaultSourceId || undefined}

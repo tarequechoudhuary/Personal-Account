@@ -18,10 +18,13 @@ interface AddIncomeModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (income: Omit<Income, 'id' | 'createdAt'>, id?: string) => void;
-  categories: IncomeCategory[];
-  paymentSources: PaymentSource[];
+  categories?: IncomeCategory[];
+  incomeCategories?: IncomeCategory[];
+  paymentSources?: PaymentSource[];
   editingIncome?: Income | null;
+  defaultSourceId?: string | null;
   defaultPaymentSourceId?: string | null;
+  onOpenAddBank?: () => void;
   onSwitchToExpense?: () => void;
 }
 
@@ -41,12 +44,18 @@ export const AddIncomeModal: React.FC<AddIncomeModalProps> = ({
   isOpen,
   onClose,
   onSave,
-  categories,
-  paymentSources,
+  categories: categoriesProp,
+  incomeCategories,
+  paymentSources = [],
   editingIncome,
+  defaultSourceId,
   defaultPaymentSourceId,
+  onOpenAddBank,
   onSwitchToExpense,
 }) => {
+  const categories = incomeCategories || categoriesProp || [];
+  const effectiveDefaultSourceId = defaultSourceId || defaultPaymentSourceId;
+
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(getCurrentDateString());
@@ -73,19 +82,19 @@ export const AddIncomeModal: React.FC<AddIncomeModalProps> = ({
       setNote('');
 
       // Default category (Salary)
-      if (categories.length > 0) {
+      if (categories && categories.length > 0) {
         setCategoryId(categories[0].id);
       }
 
       // Default payment source
-      if (defaultPaymentSourceId) {
-        setPaymentSourceId(defaultPaymentSourceId);
-      } else if (paymentSources.length > 0) {
+      if (effectiveDefaultSourceId) {
+        setPaymentSourceId(effectiveDefaultSourceId);
+      } else if (paymentSources && paymentSources.length > 0) {
         setPaymentSourceId(paymentSources[0].id);
       }
     }
     setError('');
-  }, [editingIncome, isOpen, categories, paymentSources, defaultPaymentSourceId]);
+  }, [editingIncome, isOpen, categories, paymentSources, effectiveDefaultSourceId]);
 
   if (!isOpen) return null;
 

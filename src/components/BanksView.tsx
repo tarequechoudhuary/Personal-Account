@@ -37,10 +37,10 @@ interface BanksViewProps {
 }
 
 export const BanksView: React.FC<BanksViewProps> = ({
-  paymentSources,
-  expenses,
+  paymentSources = [],
+  expenses = [],
   incomes = [],
-  categories,
+  categories = [],
   incomeCategories = [],
   onAddBank,
   onEditBank,

@@ -42,11 +42,11 @@ type TxItem =
   | { type: 'income'; data: Income; timestamp: number };
 
 export const DailyView: React.FC<DailyViewProps> = ({
-  expenses,
+  expenses = [],
   incomes = [],
-  categories,
+  categories = [],
   incomeCategories = [],
-  paymentSources,
+  paymentSources = [],
   onAddExpense,
   onAddIncome,
   onEditExpense,

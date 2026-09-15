@@ -29,8 +29,8 @@ interface LoansViewProps {
 }
 
 export const LoansView: React.FC<LoansViewProps> = ({
-  loans,
-  paymentSources,
+  loans = [],
+  paymentSources = [],
   onAddLoan,
   onEditLoan,
   onDeleteLoan,
@@ -47,7 +47,7 @@ export const LoansView: React.FC<LoansViewProps> = ({
 
   const totalGivenPaid = loans
     .filter((l) => l.type === 'given')
-    .reduce((sum, l) => sum + l.payments.reduce((s, p) => s + p.amount, 0), 0);
+    .reduce((sum, l) => sum + (l.payments || []).reduce((s, p) => s + p.amount, 0), 0);
 
   const netReceivable = Math.max(0, totalGiven - totalGivenPaid); // এখনো মোট পাবো
 
@@ -57,7 +57,7 @@ export const LoansView: React.FC<LoansViewProps> = ({
 
   const totalTakenPaid = loans
     .filter((l) => l.type === 'taken')
-    .reduce((sum, l) => sum + l.payments.reduce((s, p) => s + p.amount, 0), 0);
+    .reduce((sum, l) => sum + (l.payments || []).reduce((s, p) => s + p.amount, 0), 0);
 
   const netPayable = Math.max(0, totalTaken - totalTakenPaid); // এখনো মোট দিতে হবে
 
@@ -189,7 +189,8 @@ export const LoansView: React.FC<LoansViewProps> = ({
         ) : (
           filteredLoans.map((loan) => {
             const isGiven = loan.type === 'given';
-            const totalPaid = loan.payments.reduce((sum, p) => sum + p.amount, 0);
+            const paymentsList = loan.payments || [];
+            const totalPaid = paymentsList.reduce((sum, p) => sum + p.amount, 0);
             const remaining = Math.max(0, loan.amount - totalPaid);
             const isPaid = remaining <= 0 || loan.status === 'paid';
             const src = getSource(loan.paymentSourceId);
@@ -361,7 +362,7 @@ export const LoansView: React.FC<LoansViewProps> = ({
                     </span>
                   )}
 
-                  {loan.payments.length > 0 && (
+                  {paymentsList.length > 0 && (
                     <button
                       onClick={() =>
                         setExpandedLoanId(isExpanded ? null : loan.id)
@@ -369,7 +370,7 @@ export const LoansView: React.FC<LoansViewProps> = ({
                       className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
                     >
                       <span>
-                        {toBengaliNumber(loan.payments.length)} টি লেনদেন
+                        {toBengaliNumber(paymentsList.length)} টি লেনদেন
                       </span>
                       {isExpanded ? (
                         <ChevronUp className="w-3.5 h-3.5" />
@@ -381,12 +382,12 @@ export const LoansView: React.FC<LoansViewProps> = ({
                 </div>
 
                 {/* Expanded Payment History */}
-                {isExpanded && loan.payments.length > 0 && (
+                {isExpanded && paymentsList.length > 0 && (
                   <div className="bg-slate-50 rounded-xl p-3 border border-slate-200/80 space-y-2 text-xs">
                     <span className="font-bold text-slate-700 block text-[11px]">
                       পরিশোধের বিস্তারিত ইতিহাস:
                     </span>
-                    {loan.payments.map((p, idx) => (
+                    {paymentsList.map((p, idx) => (
                       <div
                         key={p.id}
                         className="flex items-center justify-between py-1 border-b border-slate-200 last:border-0"
