@@ -6,6 +6,7 @@ import {
   UserProfile,
   IncomeCategory,
   Income,
+  AccountTransfer,
 } from '../types';
 import { getCurrentDateString } from '../utils/formatters';
 
@@ -516,6 +517,35 @@ export const getInitialLoans = (): LoanRecord[] => {
       payments: [],
       status: 'pending',
       createdAt: Date.now() - 86400000 * 10,
+    },
+  ];
+};
+
+export const getInitialTransfers = (): AccountTransfer[] => {
+  const today = getCurrentDateString();
+  const [y, m] = today.split('-');
+  return [
+    {
+      id: 'trans-1',
+      fromSourceId: 'src-dbbl',
+      toSourceId: 'src-cash',
+      amount: 5000,
+      date: `${y}-${m}-04`,
+      time: '11:30',
+      transferType: 'withdraw_cash',
+      note: 'ATM বুথ থেকে হাত খরচের জন্য নগদ টাকা উত্তোলন (খরচের মধ্যে পড়বে না)',
+      createdAt: Date.now() - 86400000 * 7,
+    },
+    {
+      id: 'trans-2',
+      fromSourceId: 'src-brac',
+      toSourceId: 'src-bkash',
+      amount: 3000,
+      date: `${y}-${m}-08`,
+      time: '16:15',
+      transferType: 'mfs_transfer',
+      note: 'ব্যাংক অ্যাকাউন্ট থেকে বিকাশে অ্যাড মানি (স্থানান্তর)',
+      createdAt: Date.now() - 86400000 * 3,
     },
   ];
 };

@@ -8,6 +8,7 @@ import {
   UserProfile,
   Income,
   IncomeCategory,
+  AccountTransfer,
 } from './types';
 import {
   DEFAULT_CATEGORIES,
@@ -26,6 +27,7 @@ import { BanksView } from './components/BanksView';
 import { CategoriesView } from './components/CategoriesView';
 import { AddExpenseModal } from './components/AddExpenseModal';
 import { AddIncomeModal } from './components/AddIncomeModal';
+import { AddTransferModal } from './components/AddTransferModal';
 import { AddBankModal } from './components/AddBankModal';
 import { AddCategoryModal } from './components/AddCategoryModal';
 import { AddLoanModal } from './components/AddLoanModal';
@@ -165,6 +167,16 @@ export default function App() {
     return DEFAULT_INCOME_CATEGORIES;
   });
 
+  // Load transfers (টাকা স্থানান্তর / উত্তোলন - খরচে পড়বে না)
+  const [transfers, setTransfers] = useState<AccountTransfer[]>(() => {
+    const v3Saved = getStoredItem<AccountTransfer[] | null>(STORAGE_KEYS.TRANSFERS, null);
+    if (v3Saved !== null && Array.isArray(v3Saved)) {
+      return v3Saved;
+    }
+    setStoredItem(STORAGE_KEYS.TRANSFERS, []);
+    return [];
+  });
+
   const [activeTab, setActiveTab] = useState<ActiveTab>('daily');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -192,6 +204,10 @@ export default function App() {
   const [editingIncome, setEditingIncome] = useState<Income | null>(null);
   const [incomeDefaultSourceId, setIncomeDefaultSourceId] = useState<string | null>(null);
 
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [editingTransfer, setEditingTransfer] = useState<AccountTransfer | null>(null);
+  const [transferDefaultSourceId, setTransferDefaultSourceId] = useState<string | null>(null);
+
   const [isBankModalOpen, setIsBankModalOpen] = useState(false);
   const [editingBank, setEditingBank] = useState<PaymentSource | null>(null);
 
@@ -215,6 +231,10 @@ export default function App() {
   useEffect(() => {
     setStoredItem(STORAGE_KEYS.INCOMES, incomes);
   }, [incomes]);
+
+  useEffect(() => {
+    setStoredItem(STORAGE_KEYS.TRANSFERS, transfers);
+  }, [transfers]);
 
   useEffect(() => {
     setStoredItem(STORAGE_KEYS.INCOME_CATEGORIES, incomeCategories);
@@ -308,6 +328,74 @@ export default function App() {
       isDangerous: true,
       onConfirm: () => {
         executeDeleteIncome(id);
+        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+      },
+    });
+  };
+
+  // Transfer Handlers (টাকা স্থানান্তর / ক্যাশ উত্তোলন - খরচে পড়বে না)
+  const handleOpenAddTransfer = (defaultSourceId?: string) => {
+    setEditingTransfer(null);
+    setTransferDefaultSourceId(defaultSourceId || null);
+    setIsTransferModalOpen(true);
+  };
+
+  const handleEditTransfer = (transfer: AccountTransfer) => {
+    setEditingTransfer(transfer);
+    setTransferDefaultSourceId(transfer.fromSourceId);
+    setIsTransferModalOpen(true);
+  };
+
+  const handleSaveTransfer = (
+    transferData: Omit<AccountTransfer, 'id' | 'createdAt'>,
+    id?: string
+  ) => {
+    if (id) {
+      setTransfers((prev) => {
+        const next = prev.map((item) =>
+          item.id === id ? { ...item, ...transferData } : item
+        );
+        setStoredItem(STORAGE_KEYS.TRANSFERS, next);
+        return next;
+      });
+      showToast('স্থানান্তর হিসাব আপডেট করা হয়েছে');
+    } else {
+      const newTransfer: AccountTransfer = {
+        ...transferData,
+        id: `trans-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        createdAt: Date.now(),
+      };
+      setTransfers((prev) => {
+        const next = [newTransfer, ...prev];
+        setStoredItem(STORAGE_KEYS.TRANSFERS, next);
+        return next;
+      });
+      showToast('টাকা স্থানান্তর / উত্তোলন সম্পন্ন হয়েছে');
+    }
+    setIsTransferModalOpen(false);
+    setEditingTransfer(null);
+    setTransferDefaultSourceId(null);
+  };
+
+  const executeDeleteTransfer = (id: string) => {
+    setTransfers((prev) => {
+      const next = prev.filter((item) => item.id !== id);
+      setStoredItem(STORAGE_KEYS.TRANSFERS, next);
+      return next;
+    });
+    showToast('স্থানান্তর রেকর্ডটি মুছে ফেলা হয়েছে');
+  };
+
+  const handleDeleteTransfer = (id: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'স্থানান্তর হিসাব মুছবেন?',
+      message: 'আপনি কি এই টাকা স্থানান্তরের রেকর্ডটি মুছে ফেলতে চান?',
+      confirmText: 'হ্যাঁ, মুছুন',
+      cancelText: 'বাতিল',
+      isDangerous: true,
+      onConfirm: () => {
+        executeDeleteTransfer(id);
         setConfirmModal((prev) => ({ ...prev, isOpen: false }));
       },
     });
@@ -673,6 +761,7 @@ export default function App() {
       profile,
       expenses,
       incomes,
+      transfers,
       categories,
       incomeCategories,
       paymentSources,
@@ -699,6 +788,7 @@ export default function App() {
   const handleImportData = (data: {
     expenses?: Expense[];
     incomes?: Income[];
+    transfers?: AccountTransfer[];
     categories?: ExpenseCategory[];
     incomeCategories?: IncomeCategory[];
     paymentSources?: PaymentSource[];
@@ -712,6 +802,10 @@ export default function App() {
     if (data.incomes && Array.isArray(data.incomes)) {
       setIncomes(data.incomes);
       setStoredItem(STORAGE_KEYS.INCOMES, data.incomes);
+    }
+    if (data.transfers && Array.isArray(data.transfers)) {
+      setTransfers(data.transfers);
+      setStoredItem(STORAGE_KEYS.TRANSFERS, data.transfers);
     }
     if (data.categories && Array.isArray(data.categories)) {
       setCategories(data.categories);
@@ -749,9 +843,11 @@ export default function App() {
       onConfirm: () => {
         setExpenses([]);
         setIncomes([]);
+        setTransfers([]);
         setLoans([]);
         setStoredItem(STORAGE_KEYS.EXPENSES, []);
         setStoredItem(STORAGE_KEYS.INCOMES, []);
+        setStoredItem(STORAGE_KEYS.TRANSFERS, []);
         setStoredItem(STORAGE_KEYS.LOANS, []);
         setStoredItem(STORAGE_KEYS.INITIALIZED, true);
         showToast('সমস্ত হিসাব সাফ করা হয়েছে! খাতা এখন সম্পূর্ণ পরিষ্কার।');
@@ -777,9 +873,11 @@ export default function App() {
         const demoIncomes = getInitialIncomes();
         setExpenses(demoExp);
         setIncomes(demoIncomes);
+        setTransfers([]);
         setLoans(demoLoans);
         setStoredItem(STORAGE_KEYS.EXPENSES, demoExp);
         setStoredItem(STORAGE_KEYS.INCOMES, demoIncomes);
+        setStoredItem(STORAGE_KEYS.TRANSFERS, []);
         setStoredItem(STORAGE_KEYS.LOANS, demoLoans);
         setStoredItem(STORAGE_KEYS.INITIALIZED, true);
         showToast('নমুনা ডাটা সফলভাবে যোগ করা হয়েছে!');
@@ -795,6 +893,7 @@ export default function App() {
       onTabChange={setActiveTab}
       onOpenAddExpense={handleOpenAddExpense}
       onOpenAddIncome={handleOpenAddIncome}
+      onOpenAddTransfer={handleOpenAddTransfer}
       onOpenProfile={() => setIsProfileModalOpen(true)}
       profileName={profile.name}
       onResetData={handleClearAllData}
@@ -811,15 +910,19 @@ export default function App() {
         <DailyView
           expenses={expenses}
           incomes={incomes}
+          transfers={transfers}
           categories={categories}
           incomeCategories={incomeCategories}
           paymentSources={paymentSources}
           onAddExpense={handleOpenAddExpense}
           onAddIncome={handleOpenAddIncome}
+          onAddTransfer={handleOpenAddTransfer}
           onEditExpense={handleEditExpense}
           onDeleteExpense={handleDeleteExpense}
           onEditIncome={handleEditIncome}
           onDeleteIncome={handleDeleteIncome}
+          onEditTransfer={handleEditTransfer}
+          onDeleteTransfer={handleDeleteTransfer}
         />
       )}
 
@@ -853,6 +956,7 @@ export default function App() {
           paymentSources={paymentSources}
           expenses={expenses}
           incomes={incomes}
+          transfers={transfers}
           categories={categories}
           incomeCategories={incomeCategories}
           onAddBank={handleOpenAddBank}
@@ -863,6 +967,9 @@ export default function App() {
           onAddIncomeForSource={(sourceId) => handleOpenAddIncome(sourceId)}
           onEditIncome={handleEditIncome}
           onDeleteIncome={handleDeleteIncome}
+          onAddTransfer={handleOpenAddTransfer}
+          onEditTransfer={handleEditTransfer}
+          onDeleteTransfer={handleDeleteTransfer}
         />
       )}
 
@@ -972,6 +1079,7 @@ export default function App() {
         onUpdateProfile={handleUpdateProfile}
         expenses={expenses}
         incomes={incomes}
+        transfers={transfers}
         categories={categories}
         paymentSources={paymentSources}
         loans={loans}
@@ -980,6 +1088,21 @@ export default function App() {
         onResetData={handleClearAllData}
         onClearAllData={handleClearAllData}
         onLoadDemoData={handleLoadDemoData}
+      />
+
+      {/* Transfer / Cash Withdrawal Modal */}
+      <AddTransferModal
+        isOpen={isTransferModalOpen}
+        onClose={() => {
+          setIsTransferModalOpen(false);
+          setEditingTransfer(null);
+          setTransferDefaultSourceId(null);
+        }}
+        onSave={handleSaveTransfer}
+        paymentSources={paymentSources}
+        editingTransfer={editingTransfer}
+        defaultFromSourceId={transferDefaultSourceId || undefined}
+        onOpenAddBank={() => setIsBankModalOpen(true)}
       />
 
       {/* In-app Confirmation Dialog (Never blocked by browser) */}

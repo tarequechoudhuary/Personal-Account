@@ -73,6 +73,25 @@ export interface LoanRecord {
   createdAt: number;
 }
 
+export type TransferType =
+  | 'bank_to_bank' // এক ব্যাংক থেকে অন্য ব্যাংক
+  | 'withdraw_cash' // ব্যাংক থেকে ক্যাশ উত্তোলন
+  | 'deposit_cash' // ক্যাশ থেকে ব্যাংকে জমা
+  | 'mfs_transfer' // ব্যাংক টু বিকাশ/নগদ
+  | 'transfer'; // সাধারণ স্থানান্তর
+
+export interface AccountTransfer {
+  id: string;
+  fromSourceId: string; // যে একাউন্ট থেকে টাকা কাটা হবে (e.g. ব্যাংক)
+  toSourceId: string; // যে একাউন্টে টাকা যোগ হবে (e.g. ক্যাশ / অন্য ব্যাংক)
+  amount: number; // স্থানান্তরিত পরিমাণ (টাকা)
+  date: string; // YYYY-MM-DD
+  time: string; // HH:mm
+  transferType?: TransferType;
+  note?: string; // নোট (যেমন: "ATM বুথ থেকে ক্যাশ উত্তোলন")
+  createdAt: number;
+}
+
 export interface UserProfile {
   name: string;
   phone?: string;

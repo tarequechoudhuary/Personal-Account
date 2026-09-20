@@ -18,6 +18,7 @@ interface AndroidFrameProps {
   onTabChange: (tab: ActiveTab) => void;
   onOpenAddExpense: () => void;
   onOpenAddIncome?: () => void;
+  onOpenAddTransfer?: () => void;
   onOpenProfile: () => void;
   profileName?: string;
   onResetData: () => void;
@@ -29,6 +30,7 @@ export const AndroidFrame: React.FC<AndroidFrameProps> = ({
   onTabChange,
   onOpenAddExpense,
   onOpenAddIncome,
+  onOpenAddTransfer,
   onOpenProfile,
   profileName,
   onResetData,
@@ -109,7 +111,7 @@ export const AndroidFrame: React.FC<AndroidFrameProps> = ({
               />
 
               {/* Add Income Option */}
-              <div className="relative z-40 flex items-center gap-2 animate-in slide-in-from-bottom-2 duration-150">
+              <div className="relative z-40 flex items-center gap-2 animate-in slide-in-from-bottom-3 duration-150">
                 <span className="bg-slate-900 text-white text-xs font-bold px-2.5 py-1 rounded-xl shadow-md">
                   টাকা জমা / আয়
                 </span>
@@ -125,6 +127,27 @@ export const AndroidFrame: React.FC<AndroidFrameProps> = ({
                   <TrendingUp className="w-6 h-6 stroke-[2.5]" />
                 </button>
               </div>
+
+              {/* Add Transfer / Withdrawal Option (internal transfer, not an expense) */}
+              {onOpenAddTransfer && (
+                <div className="relative z-40 flex items-center gap-2 animate-in slide-in-from-bottom-2 duration-150">
+                  <span className="bg-slate-900 text-white text-xs font-bold px-2.5 py-1 rounded-xl shadow-md flex items-center gap-1">
+                    <span>স্থানান্তর / উত্তোলন</span>
+                    <span className="text-[10px] text-indigo-300">(খরচ নয়)</span>
+                  </span>
+                  <button
+                    id="fab-action-transfer"
+                    onClick={() => {
+                      setIsFabMenuOpen(false);
+                      onOpenAddTransfer();
+                    }}
+                    className="w-12 h-12 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center shadow-lg active:scale-95 transition-all"
+                    title="ব্যাংক থেকে ক্যাশ উত্তোলন বা ব্যাংক ট্রান্সফার"
+                  >
+                    <ArrowLeftRight className="w-5 h-5 stroke-[2.2]" />
+                  </button>
+                </div>
+              )}
 
               {/* Add Expense Option */}
               <div className="relative z-40 flex items-center gap-2 animate-in slide-in-from-bottom-1 duration-150">

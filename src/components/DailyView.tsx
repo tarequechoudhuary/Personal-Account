@@ -12,8 +12,16 @@ import {
   TrendingUp,
   ArrowDownLeft,
   Wallet,
+  ArrowLeftRight,
 } from 'lucide-react';
-import { Expense, ExpenseCategory, PaymentSource, Income, IncomeCategory } from '../types';
+import {
+  Expense,
+  ExpenseCategory,
+  PaymentSource,
+  Income,
+  IncomeCategory,
+  AccountTransfer,
+} from '../types';
 import {
   formatCurrency,
   formatBengaliDate,
@@ -22,43 +30,53 @@ import {
 } from '../utils/formatters';
 import { ExpenseItem } from './ExpenseItem';
 import { IncomeItem } from './IncomeItem';
+import { TransferItem } from './TransferItem';
 
 interface DailyViewProps {
   expenses: Expense[];
   incomes?: Income[];
+  transfers?: AccountTransfer[];
   categories: ExpenseCategory[];
   incomeCategories?: IncomeCategory[];
   paymentSources: PaymentSource[];
   onAddExpense: () => void;
   onAddIncome?: () => void;
+  onAddTransfer?: () => void;
   onEditExpense: (expense: Expense) => void;
   onDeleteExpense: (id: string) => void;
   onEditIncome?: (income: Income) => void;
   onDeleteIncome?: (id: string) => void;
+  onEditTransfer?: (transfer: AccountTransfer) => void;
+  onDeleteTransfer?: (id: string) => void;
 }
 
 type TxItem =
   | { type: 'expense'; data: Expense; timestamp: number }
-  | { type: 'income'; data: Income; timestamp: number };
+  | { type: 'income'; data: Income; timestamp: number }
+  | { type: 'transfer'; data: AccountTransfer; timestamp: number };
 
 export const DailyView: React.FC<DailyViewProps> = ({
   expenses = [],
   incomes = [],
+  transfers = [],
   categories = [],
   incomeCategories = [],
   paymentSources = [],
   onAddExpense,
   onAddIncome,
+  onAddTransfer,
   onEditExpense,
   onDeleteExpense,
   onEditIncome,
   onDeleteIncome,
+  onEditTransfer,
+  onDeleteTransfer,
 }) => {
   const [selectedDate, setSelectedDate] = useState<string>(getCurrentDateString());
   const [filterCategoryId, setFilterCategoryId] = useState<string>('all');
   const [filterSourceId, setFilterSourceId] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [activeTxTab, setActiveTxTab] = useState<'all' | 'expense' | 'income'>('all');
+  const [activeTxTab, setActiveTxTab] = useState<'all' | 'expense' | 'income' | 'transfer'>('all');
 
   // Move date by +/- 1 day
   const changeDate = (days: number) => {
@@ -70,9 +88,10 @@ export const DailyView: React.FC<DailyViewProps> = ({
     setSelectedDate(`${y}-${m}-${day}`);
   };
 
-  // Filter expenses and incomes for selected date
+  // Filter expenses, incomes and transfers for selected date
   const dateExpenses = expenses.filter((e) => e.date === selectedDate);
   const dateIncomes = incomes.filter((i) => i.date === selectedDate);
+  const dateTransfers = transfers.filter((t) => t.date === selectedDate);
 
   const mainCategories = categories.filter((c) => !c.parentId);
   const orphanCategories = categories.filter(
@@ -114,9 +133,26 @@ export const DailyView: React.FC<DailyViewProps> = ({
     return true;
   });
 
-  // Totals for the day
+  // Filtered transfers
+  const filteredTransfers = dateTransfers.filter((t) => {
+    if (filterSourceId !== 'all' && t.fromSourceId !== filterSourceId && t.toSourceId !== filterSourceId) {
+      return false;
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const fromSrc = paymentSources.find((s) => s.id === t.fromSourceId)?.name.toLowerCase() || '';
+      const toSrc = paymentSources.find((s) => s.id === t.toSourceId)?.name.toLowerCase() || '';
+      const matchNote = t.note?.toLowerCase().includes(q);
+      const matchRef = t.referenceNumber?.toLowerCase().includes(q);
+      if (!fromSrc.includes(q) && !toSrc.includes(q) && !matchNote && !matchRef) return false;
+    }
+    return true;
+  });
+
+  // Totals for the day (Note: Transfers do NOT add to expense or income)
   const totalDayExpense = dateExpenses.reduce((sum, e) => sum + e.amount, 0);
   const totalDayIncome = dateIncomes.reduce((sum, i) => sum + i.amount, 0);
+  const totalDayTransfer = dateTransfers.reduce((sum, t) => sum + t.amount, 0);
   const dayBalance = totalDayIncome - totalDayExpense;
 
   // Breakdown by cash vs bank vs mfs (for expenses)
@@ -161,6 +197,15 @@ export const DailyView: React.FC<DailyViewProps> = ({
       });
     });
   }
+  if (activeTxTab === 'all' || activeTxTab === 'transfer') {
+    filteredTransfers.forEach((t) => {
+      combinedItems.push({
+        type: 'transfer',
+        data: t,
+        timestamp: t.createdAt || 0,
+      });
+    });
+  }
 
   // Sort descending by time
   combinedItems.sort((a, b) => {
@@ -171,6 +216,8 @@ export const DailyView: React.FC<DailyViewProps> = ({
     }
     return timeB.localeCompare(timeA);
   });
+
+  const totalTxCount = dateExpenses.length + dateIncomes.length + dateTransfers.length;
 
   return (
     <div className="space-y-4 pb-20">
@@ -234,7 +281,7 @@ export const DailyView: React.FC<DailyViewProps> = ({
               <span>আজকের হিসাব বিবরণী</span>
             </span>
             <span className="text-xs bg-white/20 backdrop-blur-xs px-2.5 py-0.5 rounded-full text-white font-medium">
-              {toBengaliNumber(dateExpenses.length + dateIncomes.length)} টি লেনদেন
+              {toBengaliNumber(totalTxCount)} টি লেনদেন
             </span>
           </div>
 
@@ -279,6 +326,28 @@ export const DailyView: React.FC<DailyViewProps> = ({
             </div>
           </div>
 
+          {/* Non-expense Transfer Callout (if any transfer happened today) */}
+          {totalDayTransfer > 0 && (
+            <div className="bg-white/15 backdrop-blur-xs rounded-2xl p-2.5 flex items-center justify-between border border-white/20">
+              <div className="flex items-center gap-2">
+                <div className="p-1 bg-white/20 rounded-lg shrink-0">
+                  <ArrowLeftRight className="w-3.5 h-3.5 text-indigo-100" />
+                </div>
+                <div>
+                  <span className="text-[11px] font-bold text-white block">
+                    স্থানান্তর / ক্যাশ উত্তোলন: {formatCurrency(totalDayTransfer)}
+                  </span>
+                  <span className="text-[10px] text-emerald-100/90 block">
+                    * খরচের আওতামুক্ত (এক অ্যাকাউন্ট থেকে অন্য অ্যাকাউন্টে সমন্বয়)
+                  </span>
+                </div>
+              </div>
+              <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-full text-white shrink-0">
+                {toBengaliNumber(dateTransfers.length)} টি
+              </span>
+            </div>
+          )}
+
           {/* Quick source breakdown pills */}
           <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/15 text-xs">
             <div className="bg-white/10 backdrop-blur-xs rounded-xl p-2">
@@ -315,22 +384,22 @@ export const DailyView: React.FC<DailyViewProps> = ({
       </div>
 
       {/* Tabs & Quick Add row */}
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1">
         {/* Transaction Type Filter Tabs */}
-        <div className="flex bg-slate-200/80 p-1 rounded-2xl">
+        <div className="flex bg-slate-200/80 p-1 rounded-2xl shrink-0">
           <button
             onClick={() => setActiveTxTab('all')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+            className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
               activeTxTab === 'all'
                 ? 'bg-white text-slate-800 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            সব ({toBengaliNumber(dateExpenses.length + dateIncomes.length)})
+            সব ({toBengaliNumber(totalTxCount)})
           </button>
           <button
             onClick={() => setActiveTxTab('income')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${
+            className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${
               activeTxTab === 'income'
                 ? 'bg-emerald-600 text-white shadow-xs'
                 : 'text-emerald-700 hover:text-emerald-800'
@@ -341,7 +410,7 @@ export const DailyView: React.FC<DailyViewProps> = ({
           </button>
           <button
             onClick={() => setActiveTxTab('expense')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${
+            className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${
               activeTxTab === 'expense'
                 ? 'bg-rose-600 text-white shadow-xs'
                 : 'text-rose-700 hover:text-rose-800'
@@ -350,10 +419,34 @@ export const DailyView: React.FC<DailyViewProps> = ({
             <span>খরচ</span>
             <span>({toBengaliNumber(dateExpenses.length)})</span>
           </button>
+          <button
+            onClick={() => setActiveTxTab('transfer')}
+            className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${
+              activeTxTab === 'transfer'
+                ? 'bg-indigo-600 text-white shadow-xs'
+                : 'text-indigo-700 hover:text-indigo-800'
+            }`}
+            title="ব্যাংক বা ক্যাশের স্থানান্তর (খরচ নয়)"
+          >
+            <ArrowLeftRight className="w-3 h-3" />
+            <span>স্থানান্তর</span>
+            <span>({toBengaliNumber(dateTransfers.length)})</span>
+          </button>
         </div>
 
         {/* Quick Add Buttons */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 shrink-0">
+          {onAddTransfer && (
+            <button
+              id="btn-quick-add-transfer"
+              onClick={onAddTransfer}
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 text-xs font-bold transition-colors shadow-2xs"
+              title="ব্যাংক থেকে ক্যাশ উত্তোলন বা ব্যাংক ট্রান্সফার"
+            >
+              <ArrowLeftRight className="w-3.5 h-3.5" />
+              <span>+ স্থানান্তর</span>
+            </button>
+          )}
           {onAddIncome && (
             <button
               id="btn-quick-add-income"
@@ -512,7 +605,7 @@ export const DailyView: React.FC<DailyViewProps> = ({
                   onDelete={onDeleteExpense}
                 />
               );
-            } else {
+            } else if (item.type === 'income') {
               const income = item.data;
               const cat = incomeCategories.find((c) => c.id === income.categoryId);
               const src = paymentSources.find((s) => s.id === income.paymentSourceId);
@@ -524,6 +617,20 @@ export const DailyView: React.FC<DailyViewProps> = ({
                   paymentSource={src}
                   onEdit={(inc) => onEditIncome?.(inc)}
                   onDelete={(id) => onDeleteIncome?.(id)}
+                />
+              );
+            } else {
+              const transfer = item.data;
+              const fromSrc = paymentSources.find((s) => s.id === transfer.fromSourceId);
+              const toSrc = paymentSources.find((s) => s.id === transfer.toSourceId);
+              return (
+                <TransferItem
+                  key={`trans-${transfer.id}`}
+                  transfer={transfer}
+                  fromSource={fromSrc}
+                  toSource={toSrc}
+                  onEdit={onEditTransfer}
+                  onDelete={onDeleteTransfer}
                 />
               );
             }

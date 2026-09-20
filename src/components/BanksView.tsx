@@ -14,16 +14,27 @@ import {
   Scale,
   ArrowUpRight,
   ArrowDownRight,
+  ArrowLeftRight,
 } from 'lucide-react';
-import { PaymentSource, Expense, ExpenseCategory, PaymentType, Income, IncomeCategory } from '../types';
+import {
+  PaymentSource,
+  Expense,
+  ExpenseCategory,
+  PaymentType,
+  Income,
+  IncomeCategory,
+  AccountTransfer,
+} from '../types';
 import { formatCurrency, toBengaliNumber, BENGALI_MONTHS } from '../utils/formatters';
 import { ExpenseItem } from './ExpenseItem';
 import { IncomeItem } from './IncomeItem';
+import { TransferItem } from './TransferItem';
 
 interface BanksViewProps {
   paymentSources: PaymentSource[];
   expenses: Expense[];
   incomes?: Income[];
+  transfers?: AccountTransfer[];
   categories: ExpenseCategory[];
   incomeCategories?: IncomeCategory[];
   onAddBank: () => void;
@@ -34,12 +45,16 @@ interface BanksViewProps {
   onAddIncomeForSource?: (sourceId: string) => void;
   onEditIncome?: (income: Income) => void;
   onDeleteIncome?: (id: string) => void;
+  onAddTransfer?: (fromSourceId?: string) => void;
+  onEditTransfer?: (transfer: AccountTransfer) => void;
+  onDeleteTransfer?: (id: string) => void;
 }
 
 export const BanksView: React.FC<BanksViewProps> = ({
   paymentSources = [],
   expenses = [],
   incomes = [],
+  transfers = [],
   categories = [],
   incomeCategories = [],
   onAddBank,
@@ -50,6 +65,9 @@ export const BanksView: React.FC<BanksViewProps> = ({
   onAddIncomeForSource,
   onEditIncome,
   onDeleteIncome,
+  onAddTransfer,
+  onEditTransfer,
+  onDeleteTransfer,
 }) => {
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<PaymentType | 'all'>('all');
@@ -97,14 +115,32 @@ export const BanksView: React.FC<BanksViewProps> = ({
       .reduce((sum, i) => sum + i.amount, 0);
   };
 
+  const getSourceTransfersInTotal = (sourceId: string) => {
+    return transfers
+      .filter((t) => t.toSourceId === sourceId)
+      .reduce((sum, t) => sum + t.amount, 0);
+  };
+
+  const getSourceTransfersOutTotal = (sourceId: string) => {
+    return transfers
+      .filter((t) => t.fromSourceId === sourceId)
+      .reduce((sum, t) => sum + t.amount, 0);
+  };
+
+  // Account Balance = (Income + Transfers In) - (Expense + Transfers Out)
   const getSourceBalance = (sourceId: string) => {
-    return getSourceIncomeTotal(sourceId) - getSourceExpenseTotal(sourceId);
+    const totalIn = getSourceIncomeTotal(sourceId) + getSourceTransfersInTotal(sourceId);
+    const totalOut = getSourceExpenseTotal(sourceId) + getSourceTransfersOutTotal(sourceId);
+    return totalIn - totalOut;
   };
 
   const getSourceTxCount = (sourceId: string) => {
     const expCount = expenses.filter((e) => e.paymentSourceId === sourceId).length;
     const incCount = incomes.filter((i) => i.paymentSourceId === sourceId).length;
-    return { expCount, incCount, total: expCount + incCount };
+    const transCount = transfers.filter(
+      (t) => t.fromSourceId === sourceId || t.toSourceId === sourceId
+    ).length;
+    return { expCount, incCount, transCount, total: expCount + incCount + transCount };
   };
 
   // Current & Previous Month Balance Calculations
@@ -144,10 +180,16 @@ export const BanksView: React.FC<BanksViewProps> = ({
     const inc = incomes
       .filter((i) => i.paymentSourceId === sourceId && i.date <= prevCutoff)
       .reduce((s, i) => s + i.amount, 0);
+    const transIn = transfers
+      .filter((t) => t.toSourceId === sourceId && t.date <= prevCutoff)
+      .reduce((s, t) => s + t.amount, 0);
     const exp = expenses
       .filter((e) => e.paymentSourceId === sourceId && e.date <= prevCutoff)
       .reduce((s, e) => s + e.amount, 0);
-    return inc - exp;
+    const transOut = transfers
+      .filter((t) => t.fromSourceId === sourceId && t.date <= prevCutoff)
+      .reduce((s, t) => s + t.amount, 0);
+    return inc + transIn - (exp + transOut);
   };
 
   // Currently selected source for viewing individual statement
@@ -158,11 +200,24 @@ export const BanksView: React.FC<BanksViewProps> = ({
   const selectedSourceIncomes = selectedSourceId
     ? incomes.filter((i) => i.paymentSourceId === selectedSourceId)
     : [];
+  const selectedSourceTransfers = selectedSourceId
+    ? transfers.filter(
+        (t) => t.fromSourceId === selectedSourceId || t.toSourceId === selectedSourceId
+      )
+    : [];
 
   // Combined transactions for selected source sorted by date/time
   type CombinedTx =
     | { type: 'expense'; data: Expense; date: string; time: string; timestamp: number }
-    | { type: 'income'; data: Income; date: string; time: string; timestamp: number };
+    | { type: 'income'; data: Income; date: string; time: string; timestamp: number }
+    | {
+        type: 'transfer';
+        data: AccountTransfer;
+        date: string;
+        time: string;
+        timestamp: number;
+        direction: 'in' | 'out';
+      };
 
   const selectedSourceCombined: CombinedTx[] = [
     ...selectedSourceExpenses.map((e) => ({
@@ -179,6 +234,14 @@ export const BanksView: React.FC<BanksViewProps> = ({
       time: i.time,
       timestamp: i.createdAt,
     })),
+    ...selectedSourceTransfers.map((t) => ({
+      type: 'transfer' as const,
+      data: t,
+      date: t.date,
+      time: t.time,
+      timestamp: t.createdAt,
+      direction: (t.toSourceId === selectedSourceId ? 'in' : 'out') as 'in' | 'out',
+    })),
   ].sort((a, b) => {
     if (a.date === b.date) {
       return (b.time || '00:00').localeCompare(a.time || '00:00');
@@ -189,7 +252,7 @@ export const BanksView: React.FC<BanksViewProps> = ({
   return (
     <div className="space-y-4 pb-20">
       {/* Top Banner / Intro */}
-      <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-xs flex items-center justify-between">
+      <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h3 className="text-base font-bold text-slate-800">
             ব্যাংক ও ক্যাশ একাউন্টস
@@ -198,14 +261,27 @@ export const BanksView: React.FC<BanksViewProps> = ({
             কোন ব্যাংকে কত টাকা জমা হয়েছে ও কত খরচ হয়েছে তার স্থিতি
           </p>
         </div>
-        <button
-          id="btn-add-new-bank-page"
-          onClick={onAddBank}
-          className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition-all active:scale-95 shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          <span>নতুন ব্যাংক যোগ</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {onAddTransfer && (
+            <button
+              id="btn-add-transfer-banks-page"
+              onClick={() => onAddTransfer()}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 font-bold text-xs shadow-2xs transition-all active:scale-95 shrink-0"
+              title="ব্যাংক থেকে ক্যাশ উত্তোলন বা এক ব্যাংক থেকে অন্য ব্যাংকে স্থানান্তর"
+            >
+              <ArrowLeftRight className="w-3.5 h-3.5" />
+              <span>টাকা স্থানান্তর</span>
+            </button>
+          )}
+          <button
+            id="btn-add-new-bank-page"
+            onClick={onAddBank}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition-all active:scale-95 shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            <span>নতুন ব্যাংক</span>
+          </button>
+        </div>
       </div>
 
       {/* Month-over-Month Combined Balance Banner */}
@@ -313,7 +389,9 @@ export const BanksView: React.FC<BanksViewProps> = ({
         {filteredSources.map((source) => {
           const totalIncome = getSourceIncomeTotal(source.id);
           const totalSpent = getSourceExpenseTotal(source.id);
-          const balance = totalIncome - totalSpent;
+          const transIn = getSourceTransfersInTotal(source.id);
+          const transOut = getSourceTransfersOutTotal(source.id);
+          const balance = getSourceBalance(source.id);
           const { total } = getSourceTxCount(source.id);
           const isSelected = selectedSourceId === source.id;
 
@@ -359,6 +437,17 @@ export const BanksView: React.FC<BanksViewProps> = ({
                   className="flex items-center gap-1"
                   onClick={(e) => e.stopPropagation()}
                 >
+                  {/* Quick Transfer from this Account */}
+                  {onAddTransfer && (
+                    <button
+                      id={`btn-transfer-from-${source.id}`}
+                      onClick={() => onAddTransfer(source.id)}
+                      className="p-1.5 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg transition-colors border border-indigo-200/60"
+                      title="এই অ্যাকাউন্ট থেকে অন্য ব্যাংক বা ক্যাশে স্থানান্তর/উত্তোলন"
+                    >
+                      <ArrowLeftRight className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                   {/* Quick Add Income to this Account */}
                   {onAddIncomeForSource && (
                     <button
@@ -429,6 +518,24 @@ export const BanksView: React.FC<BanksViewProps> = ({
                 </div>
               </div>
 
+              {/* Non-expense Transfer summary for this account if any */}
+              {(transIn > 0 || transOut > 0) && (
+                <div className="mt-2 bg-indigo-50/80 p-1.5 px-2.5 rounded-xl text-[10px] text-indigo-900 flex items-center justify-between border border-indigo-100">
+                  <span className="flex items-center gap-1 font-medium">
+                    <ArrowLeftRight className="w-3 h-3 text-indigo-600" />
+                    <span>স্থানান্তর সমন্বয় (খরচ নয়):</span>
+                  </span>
+                  <span className="font-bold flex items-center gap-1.5">
+                    {transIn > 0 && (
+                      <span className="text-emerald-700">+{formatCurrency(transIn)}</span>
+                    )}
+                    {transOut > 0 && (
+                      <span className="text-indigo-700">-{formatCurrency(transOut)}</span>
+                    )}
+                  </span>
+                </div>
+              )}
+
               {/* Month-over-Month Comparison row for this account */}
               {(() => {
                 const prevBal = getSourcePrevMonthBalance(source.id);
@@ -487,6 +594,15 @@ export const BanksView: React.FC<BanksViewProps> = ({
               </h4>
             </div>
             <div className="flex items-center gap-2">
+              {onAddTransfer && (
+                <button
+                  onClick={() => onAddTransfer(selectedSource.id)}
+                  className="text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1"
+                >
+                  <ArrowLeftRight className="w-3.5 h-3.5" />
+                  <span>স্থানান্তর</span>
+                </button>
+              )}
               {onAddIncomeForSource && (
                 <button
                   onClick={() => onAddIncomeForSource(selectedSource.id)}
@@ -525,7 +641,7 @@ export const BanksView: React.FC<BanksViewProps> = ({
                     showDate={true}
                   />
                 );
-              } else {
+              } else if (tx.type === 'income') {
                 const cat = incomeCategories.find((c) => c.id === tx.data.categoryId);
                 return (
                   <IncomeItem
@@ -535,6 +651,20 @@ export const BanksView: React.FC<BanksViewProps> = ({
                     paymentSource={selectedSource}
                     onEdit={(inc) => onEditIncome?.(inc)}
                     onDelete={(id) => onDeleteIncome?.(id)}
+                    showDate={true}
+                  />
+                );
+              } else {
+                const fromSrc = paymentSources.find((s) => s.id === tx.data.fromSourceId);
+                const toSrc = paymentSources.find((s) => s.id === tx.data.toSourceId);
+                return (
+                  <TransferItem
+                    key={`trans-${tx.data.id}-${tx.direction}`}
+                    transfer={tx.data}
+                    fromSource={fromSrc}
+                    toSource={toSrc}
+                    onEdit={onEditTransfer || (() => {})}
+                    onDelete={onDeleteTransfer || (() => {})}
                     showDate={true}
                   />
                 );

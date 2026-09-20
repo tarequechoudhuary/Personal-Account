@@ -24,6 +24,7 @@ import {
   LoanRecord,
   Income,
   IncomeCategory,
+  AccountTransfer,
 } from '../types';
 import { formatCurrency, toBengaliNumber } from '../utils/formatters';
 
@@ -34,6 +35,7 @@ interface ProfileModalProps {
   onUpdateProfile: (updated: UserProfile) => void;
   expenses: Expense[];
   incomes?: Income[];
+  transfers?: AccountTransfer[];
   categories: ExpenseCategory[];
   paymentSources: PaymentSource[];
   loans: LoanRecord[];
@@ -41,6 +43,7 @@ interface ProfileModalProps {
   onImportData: (data: {
     expenses?: Expense[];
     incomes?: Income[];
+    transfers?: AccountTransfer[];
     incomeCategories?: IncomeCategory[];
     categories?: ExpenseCategory[];
     paymentSources?: PaymentSource[];
@@ -59,6 +62,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   onUpdateProfile,
   expenses = [],
   incomes = [],
+  transfers = [],
   categories = [],
   paymentSources = [],
   loans = [],
@@ -116,7 +120,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           (!parsed.expenses &&
             !parsed.categories &&
             !parsed.paymentSources &&
-            !parsed.loans)
+            !parsed.loans &&
+            !parsed.transfers)
         ) {
           throw new Error('Invalid file format');
         }

@@ -2,6 +2,7 @@
 export const STORAGE_KEYS = {
   EXPENSES: 'hishab_expenses_v3',
   INCOMES: 'hishab_incomes_v3',
+  TRANSFERS: 'hishab_transfers_v3',
   CATEGORIES: 'hishab_categories_v3',
   INCOME_CATEGORIES: 'hishab_income_categories_v3',
   SOURCES: 'hishab_sources_v3',
