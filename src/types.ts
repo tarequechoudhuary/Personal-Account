@@ -55,6 +55,7 @@ export interface LoanPayment {
   id: string;
   amount: number;
   date: string;
+  paymentSourceId?: string; // কোন ব্যাংক বা ক্যাশে পরিশোধ/জমা হয়েছে
   note?: string;
 }
 

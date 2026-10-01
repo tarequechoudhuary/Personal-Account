@@ -709,6 +709,7 @@ export default function App() {
     loanId: string,
     amount: number,
     date: string,
+    paymentSourceId?: string,
     note?: string
   ) => {
     setLoans((prev) => {
@@ -720,6 +721,7 @@ export default function App() {
               id: `pay-${Date.now()}`,
               amount,
               date,
+              paymentSourceId: paymentSourceId || loan.paymentSourceId,
               note,
             },
           ];
@@ -930,6 +932,8 @@ export default function App() {
         <MonthlyView
           expenses={expenses}
           incomes={incomes}
+          transfers={transfers}
+          loans={loans}
           categories={categories}
           incomeCategories={incomeCategories}
           paymentSources={paymentSources}
@@ -957,6 +961,7 @@ export default function App() {
           expenses={expenses}
           incomes={incomes}
           transfers={transfers}
+          loans={loans}
           categories={categories}
           incomeCategories={incomeCategories}
           onAddBank={handleOpenAddBank}
@@ -1068,6 +1073,7 @@ export default function App() {
           setSelectedLoanForPayment(null);
         }}
         loan={selectedLoanForPayment}
+        paymentSources={paymentSources}
         onSavePayment={handleSaveLoanPayment}
       />
 

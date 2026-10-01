@@ -1,29 +1,44 @@
-import React, { useState } from 'react';
-import { X, Check, DollarSign, Calendar, FileText } from 'lucide-react';
-import { LoanRecord } from '../types';
+import React, { useState, useEffect } from 'react';
+import { X, Check, DollarSign, Calendar, FileText, Landmark } from 'lucide-react';
+import { LoanRecord, PaymentSource } from '../types';
 import { getCurrentDateString, formatCurrency, toBengaliNumber } from '../utils/formatters';
 
 interface AddLoanPaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
   loan: LoanRecord | null;
-  onSavePayment: (loanId: string, amount: number, date: string, note?: string) => void;
+  paymentSources: PaymentSource[];
+  onSavePayment: (
+    loanId: string,
+    amount: number,
+    date: string,
+    paymentSourceId?: string,
+    note?: string
+  ) => void;
 }
 
 export const AddLoanPaymentModal: React.FC<AddLoanPaymentModalProps> = ({
   isOpen,
   onClose,
   loan,
+  paymentSources = [],
   onSavePayment,
 }) => {
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(getCurrentDateString());
+  const [paymentSourceId, setPaymentSourceId] = useState('');
   const [note, setNote] = useState('');
   const [error, setError] = useState('');
 
+  useEffect(() => {
+    if (loan) {
+      setPaymentSourceId(loan.paymentSourceId || paymentSources[0]?.id || 'src-cash');
+    }
+  }, [loan, paymentSources]);
+
   if (!isOpen || !loan) return null;
 
-  const totalPaid = loan.payments.reduce((sum, p) => sum + p.amount, 0);
+  const totalPaid = (loan.payments || []).reduce((sum, p) => sum + p.amount, 0);
   const remaining = Math.max(0, loan.amount - totalPaid);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -40,7 +55,13 @@ export const AddLoanPaymentModal: React.FC<AddLoanPaymentModalProps> = ({
       return;
     }
 
-    onSavePayment(loan.id, numAmount, date, note.trim() || undefined);
+    onSavePayment(
+      loan.id,
+      numAmount,
+      date,
+      paymentSourceId || loan.paymentSourceId,
+      note.trim() || undefined
+    );
     setAmount('');
     setNote('');
     setError('');
@@ -112,10 +133,31 @@ export const AddLoanPaymentModal: React.FC<AddLoanPaymentModalProps> = ({
             </div>
           </div>
 
+          {/* Payment Source */}
+          <div>
+            <label className="text-xs font-bold text-slate-700 block mb-1">
+              {isGiven ? 'টাকা জমার মাধ্যম (কোন ক্যাশ/ব্যাংকে পেলেন)' : 'টাকা পরিশোধের মাধ্যম (কোন ক্যাশ/ব্যাংক থেকে দিলেন)'}
+            </label>
+            <div className="relative">
+              <Landmark className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <select
+                value={paymentSourceId}
+                onChange={(e) => setPaymentSourceId(e.target.value)}
+                className="w-full pl-9 pr-8 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs font-semibold text-slate-800 bg-white"
+              >
+                {paymentSources.map((src) => (
+                  <option key={src.id} value={src.id}>
+                    {src.name} {src.accountNumber ? `(${src.accountNumber})` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
           {/* Date input */}
           <div>
             <label className="text-xs font-bold text-slate-700 block mb-1">
-              পরিশোধের তারিখ
+              {isGiven ? 'টাকা প্রাপ্তির তারিখ' : 'পরিশোধের তারিখ'}
             </label>
             <div className="relative">
               <Calendar className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -158,7 +200,7 @@ export const AddLoanPaymentModal: React.FC<AddLoanPaymentModalProps> = ({
               className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 active:scale-95 transition-all"
             >
               <Check className="w-4 h-4" />
-              <span>জমা সংরক্ষণ</span>
+              <span>{isGiven ? 'জমা সংরক্ষণ' : 'পরিশোধ নিশ্চিত করুন'}</span>
             </button>
           </div>
         </form>

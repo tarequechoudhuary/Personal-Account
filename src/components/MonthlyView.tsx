@@ -17,7 +17,15 @@ import {
   ArrowDownRight,
   ArrowRight,
 } from 'lucide-react';
-import { Expense, ExpenseCategory, PaymentSource, Income, IncomeCategory } from '../types';
+import {
+  Expense,
+  ExpenseCategory,
+  PaymentSource,
+  Income,
+  IncomeCategory,
+  AccountTransfer,
+  LoanRecord,
+} from '../types';
 import {
   formatCurrency,
   BENGALI_MONTHS,
@@ -31,6 +39,8 @@ import { MonthlyComparisonView } from './MonthlyComparisonView';
 interface MonthlyViewProps {
   expenses: Expense[];
   incomes?: Income[];
+  transfers?: AccountTransfer[];
+  loans?: LoanRecord[];
   categories: ExpenseCategory[];
   incomeCategories?: IncomeCategory[];
   paymentSources: PaymentSource[];
@@ -43,6 +53,8 @@ interface MonthlyViewProps {
 export const MonthlyView: React.FC<MonthlyViewProps> = ({
   expenses = [],
   incomes = [],
+  transfers = [],
+  loans = [],
   categories = [],
   incomeCategories = [],
   paymentSources = [],
@@ -109,17 +121,58 @@ export const MonthlyView: React.FC<MonthlyViewProps> = ({
   const currLastDay = new Date(selectedYear, selectedMonth, 0).getDate();
   const currCutoff = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(currLastDay).padStart(2, '0')}`;
 
+  const getSourceBalanceAtCutoff = (sourceId: string, cutoffDate: string) => {
+    const inc = incomes
+      .filter((i) => i.paymentSourceId === sourceId && i.date <= cutoffDate)
+      .reduce((s, i) => s + i.amount, 0);
+    const transIn = transfers
+      .filter((t) => t.toSourceId === sourceId && t.date <= cutoffDate)
+      .reduce((s, t) => s + t.amount, 0);
+    const exp = expenses
+      .filter((e) => e.paymentSourceId === sourceId && e.date <= cutoffDate)
+      .reduce((s, e) => s + e.amount, 0);
+    const transOut = transfers
+      .filter((t) => t.fromSourceId === sourceId && t.date <= cutoffDate)
+      .reduce((s, t) => s + t.amount, 0);
+
+    let loanGivenOut = 0;
+    let loanGivenRepaidIn = 0;
+    loans.filter((l) => l.type === 'given').forEach((l) => {
+      if (l.paymentSourceId === sourceId && l.date <= cutoffDate) {
+        loanGivenOut += l.amount;
+      }
+      (l.payments || []).forEach((p) => {
+        const pSrc = p.paymentSourceId || l.paymentSourceId;
+        if (pSrc === sourceId && p.date <= cutoffDate) {
+          loanGivenRepaidIn += p.amount;
+        }
+      });
+    });
+
+    let loanTakenIn = 0;
+    let loanTakenRepaidOut = 0;
+    loans.filter((l) => l.type === 'taken').forEach((l) => {
+      if (l.paymentSourceId === sourceId && l.date <= cutoffDate) {
+        loanTakenIn += l.amount;
+      }
+      (l.payments || []).forEach((p) => {
+        const pSrc = p.paymentSourceId || l.paymentSourceId;
+        if (pSrc === sourceId && p.date <= cutoffDate) {
+          loanTakenRepaidOut += p.amount;
+        }
+      });
+    });
+
+    return inc + transIn + loanGivenRepaidIn + loanTakenIn - (exp + transOut + loanGivenOut + loanTakenRepaidOut);
+  };
+
   const prevTotalBalance = useMemo(() => {
-    const inc = incomes.filter((i) => i.date <= prevCutoff).reduce((s, i) => s + i.amount, 0);
-    const exp = expenses.filter((e) => e.date <= prevCutoff).reduce((s, e) => s + e.amount, 0);
-    return inc - exp;
-  }, [incomes, expenses, prevCutoff]);
+    return paymentSources.reduce((sum, s) => sum + getSourceBalanceAtCutoff(s.id, prevCutoff), 0);
+  }, [paymentSources, incomes, expenses, transfers, loans, prevCutoff]);
 
   const currTotalBalance = useMemo(() => {
-    const inc = incomes.filter((i) => i.date <= currCutoff).reduce((s, i) => s + i.amount, 0);
-    const exp = expenses.filter((e) => e.date <= currCutoff).reduce((s, e) => s + e.amount, 0);
-    return inc - exp;
-  }, [incomes, expenses, currCutoff]);
+    return paymentSources.reduce((sum, s) => sum + getSourceBalanceAtCutoff(s.id, currCutoff), 0);
+  }, [paymentSources, incomes, expenses, transfers, loans, currCutoff]);
 
   const balanceGrowth = currTotalBalance - prevTotalBalance;
 
@@ -231,21 +284,65 @@ export const MonthlyView: React.FC<MonthlyViewProps> = ({
   const sourceBreakdown = useMemo(() => {
     return paymentSources.map((source) => {
       const srcExp = monthExpenses.filter((e) => e.paymentSourceId === source.id);
-      const spent = srcExp.reduce((sum, e) => sum + e.amount, 0);
+      const spentExp = srcExp.reduce((sum, e) => sum + e.amount, 0);
 
       const srcInc = monthIncomes.filter((i) => i.paymentSourceId === source.id);
-      const received = srcInc.reduce((sum, i) => sum + i.amount, 0);
+      const receivedInc = srcInc.reduce((sum, i) => sum + i.amount, 0);
+
+      const srcTransOut = transfers
+        .filter((t) => t.fromSourceId === source.id && t.date.startsWith(monthPrefix))
+        .reduce((sum, t) => sum + t.amount, 0);
+
+      const srcTransIn = transfers
+        .filter((t) => t.toSourceId === source.id && t.date.startsWith(monthPrefix))
+        .reduce((sum, t) => sum + t.amount, 0);
+
+      // Loans Given Out this month
+      const srcLoanGivenOut = loans
+        .filter((l) => l.type === 'given' && l.paymentSourceId === source.id && l.date.startsWith(monthPrefix))
+        .reduce((sum, l) => sum + l.amount, 0);
+
+      // Loans Given Repaid In this month
+      const srcLoanGivenRepaidIn = loans
+        .filter((l) => l.type === 'given')
+        .reduce((sum, l) => {
+          const pSum = (l.payments || [])
+            .filter((p) => (p.paymentSourceId || l.paymentSourceId) === source.id && p.date.startsWith(monthPrefix))
+            .reduce((s, p) => s + p.amount, 0);
+          return sum + pSum;
+        }, 0);
+
+      // Loans Taken In this month
+      const srcLoanTakenIn = loans
+        .filter((l) => l.type === 'taken' && l.paymentSourceId === source.id && l.date.startsWith(monthPrefix))
+        .reduce((sum, l) => sum + l.amount, 0);
+
+      // Loans Taken Repaid Out this month
+      const srcLoanTakenRepaidOut = loans
+        .filter((l) => l.type === 'taken')
+        .reduce((sum, l) => {
+          const pSum = (l.payments || [])
+            .filter((p) => (p.paymentSourceId || l.paymentSourceId) === source.id && p.date.startsWith(monthPrefix))
+            .reduce((s, p) => s + p.amount, 0);
+          return sum + pSum;
+        }, 0);
+
+      const totalSpentMonth = spentExp + srcTransOut + srcLoanGivenOut + srcLoanTakenRepaidOut;
+      const totalReceivedMonth = receivedInc + srcTransIn + srcLoanGivenRepaidIn + srcLoanTakenIn;
+
+      // Cumulative balance up to end of selected month
+      const cumulativeBalance = getSourceBalanceAtCutoff(source.id, currCutoff);
 
       return {
         source,
-        spent,
+        spent: totalSpentMonth,
         spentCount: srcExp.length,
-        received,
+        received: totalReceivedMonth,
         receivedCount: srcInc.length,
-        balance: received - spent,
+        balance: cumulativeBalance,
       };
     });
-  }, [paymentSources, monthExpenses, monthIncomes]);
+  }, [paymentSources, monthExpenses, monthIncomes, transfers, loans, monthPrefix, currCutoff]);
 
   // Type totals for expenses
   const typeTotals = useMemo(() => {

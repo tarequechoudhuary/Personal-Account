@@ -387,26 +387,36 @@ export const LoansView: React.FC<LoansViewProps> = ({
                     <span className="font-bold text-slate-700 block text-[11px]">
                       পরিশোধের বিস্তারিত ইতিহাস:
                     </span>
-                    {paymentsList.map((p, idx) => (
-                      <div
-                        key={p.id}
-                        className="flex items-center justify-between py-1 border-b border-slate-200 last:border-0"
-                      >
-                        <div>
-                          <span className="font-semibold text-slate-800">
-                            {formatCurrency(p.amount)}
+                    {paymentsList.map((p, idx) => {
+                      const pSrc = getSource(p.paymentSourceId || loan.paymentSourceId);
+                      return (
+                        <div
+                          key={p.id}
+                          className="flex items-center justify-between py-1.5 border-b border-slate-200/70 last:border-0"
+                        >
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-bold text-slate-800">
+                                {formatCurrency(p.amount)}
+                              </span>
+                              {pSrc && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-white border border-slate-200 text-slate-600 font-medium">
+                                  {pSrc.name}
+                                </span>
+                              )}
+                            </div>
+                            {p.note && (
+                              <span className="text-slate-400 block text-[10px] mt-0.5">
+                                {p.note}
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-slate-400 text-[11px] shrink-0">
+                            {formatBengaliDate(p.date)}
                           </span>
-                          {p.note && (
-                            <span className="text-slate-400 block text-[10px]">
-                              {p.note}
-                            </span>
-                          )}
                         </div>
-                        <span className="text-slate-400 text-[11px]">
-                          {formatBengaliDate(p.date)}
-                        </span>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>

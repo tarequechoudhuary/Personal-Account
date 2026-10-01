@@ -15,6 +15,9 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   ArrowLeftRight,
+  HandCoins,
+  User,
+  Calendar,
 } from 'lucide-react';
 import {
   PaymentSource,
@@ -24,8 +27,10 @@ import {
   Income,
   IncomeCategory,
   AccountTransfer,
+  LoanRecord,
+  LoanPayment,
 } from '../types';
-import { formatCurrency, toBengaliNumber, BENGALI_MONTHS } from '../utils/formatters';
+import { formatCurrency, toBengaliNumber, BENGALI_MONTHS, formatBengaliDate } from '../utils/formatters';
 import { ExpenseItem } from './ExpenseItem';
 import { IncomeItem } from './IncomeItem';
 import { TransferItem } from './TransferItem';
@@ -35,6 +40,7 @@ interface BanksViewProps {
   expenses: Expense[];
   incomes?: Income[];
   transfers?: AccountTransfer[];
+  loans?: LoanRecord[];
   categories: ExpenseCategory[];
   incomeCategories?: IncomeCategory[];
   onAddBank: () => void;
@@ -55,6 +61,7 @@ export const BanksView: React.FC<BanksViewProps> = ({
   expenses = [],
   incomes = [],
   transfers = [],
+  loans = [],
   categories = [],
   incomeCategories = [],
   onAddBank,
@@ -127,10 +134,58 @@ export const BanksView: React.FC<BanksViewProps> = ({
       .reduce((sum, t) => sum + t.amount, 0);
   };
 
-  // Account Balance = (Income + Transfers In) - (Expense + Transfers Out)
+  // Loans Given (কাউকে ধার দেওয়া = ব্যাংক/ক্যাশ থেকে মাইনাস)
+  const getSourceLoansGivenOutTotal = (sourceId: string) => {
+    return loans
+      .filter((l) => l.type === 'given' && l.paymentSourceId === sourceId)
+      .reduce((sum, l) => sum + l.amount, 0);
+  };
+
+  // Loans Given Repaid In (দেওয়া লোন ফেরত আদায় = ব্যাংক/ক্যাশে প্লাস)
+  const getSourceLoansGivenRepaidInTotal = (sourceId: string) => {
+    return loans
+      .filter((l) => l.type === 'given')
+      .reduce((sum, l) => {
+        const paidForThisSource = (l.payments || [])
+          .filter((p) => (p.paymentSourceId || l.paymentSourceId) === sourceId)
+          .reduce((pSum, p) => pSum + p.amount, 0);
+        return sum + paidForThisSource;
+      }, 0);
+  };
+
+  // Loans Taken In (কারো থেকে ঋণ নেওয়া = ব্যাংক/ক্যাশে প্লাস)
+  const getSourceLoansTakenInTotal = (sourceId: string) => {
+    return loans
+      .filter((l) => l.type === 'taken' && l.paymentSourceId === sourceId)
+      .reduce((sum, l) => sum + l.amount, 0);
+  };
+
+  // Loans Taken Repaid Out (নেওয়া ঋণের টাকা শোধ = ব্যাংক/ক্যাশ থেকে মাইনাস)
+  const getSourceLoansTakenRepaidOutTotal = (sourceId: string) => {
+    return loans
+      .filter((l) => l.type === 'taken')
+      .reduce((sum, l) => {
+        const paidForThisSource = (l.payments || [])
+          .filter((p) => (p.paymentSourceId || l.paymentSourceId) === sourceId)
+          .reduce((pSum, p) => pSum + p.amount, 0);
+        return sum + paidForThisSource;
+      }, 0);
+  };
+
+  // Account Balance = (Income + Transfers In + Loan Repaid In + Loan Taken In) - (Expense + Transfers Out + Loan Given Out + Loan Taken Repaid Out)
   const getSourceBalance = (sourceId: string) => {
-    const totalIn = getSourceIncomeTotal(sourceId) + getSourceTransfersInTotal(sourceId);
-    const totalOut = getSourceExpenseTotal(sourceId) + getSourceTransfersOutTotal(sourceId);
+    const totalIn =
+      getSourceIncomeTotal(sourceId) +
+      getSourceTransfersInTotal(sourceId) +
+      getSourceLoansGivenRepaidInTotal(sourceId) +
+      getSourceLoansTakenInTotal(sourceId);
+
+    const totalOut =
+      getSourceExpenseTotal(sourceId) +
+      getSourceTransfersOutTotal(sourceId) +
+      getSourceLoansGivenOutTotal(sourceId) +
+      getSourceLoansTakenRepaidOutTotal(sourceId);
+
     return totalIn - totalOut;
   };
 
@@ -140,7 +195,17 @@ export const BanksView: React.FC<BanksViewProps> = ({
     const transCount = transfers.filter(
       (t) => t.fromSourceId === sourceId || t.toSourceId === sourceId
     ).length;
-    return { expCount, incCount, transCount, total: expCount + incCount + transCount };
+    const loanGivenCount = loans.filter((l) => l.type === 'given' && l.paymentSourceId === sourceId).length;
+    const loanTakenCount = loans.filter((l) => l.type === 'taken' && l.paymentSourceId === sourceId).length;
+    const paymentCount = loans.reduce((acc, l) => {
+      const pCount = (l.payments || []).filter(
+        (p) => (p.paymentSourceId || l.paymentSourceId) === sourceId
+      ).length;
+      return acc + pCount;
+    }, 0);
+
+    const total = expCount + incCount + transCount + loanGivenCount + loanTakenCount + paymentCount;
+    return { expCount, incCount, transCount, loanCount: loanGivenCount + loanTakenCount + paymentCount, total };
   };
 
   // Current & Previous Month Balance Calculations
@@ -160,36 +225,70 @@ export const BanksView: React.FC<BanksViewProps> = ({
   const prevMonthLabel = `${BENGALI_MONTHS[prevMonth - 1]} ${toBengaliNumber(prevYear)}`;
   const currMonthLabel = `${BENGALI_MONTHS[currMonth - 1]} ${toBengaliNumber(currYear)}`;
 
+  // Balance at any specific cutoff date for a specific source
+  const getSourceBalanceAtCutoff = (sourceId: string, cutoffDate: string) => {
+    const inc = incomes
+      .filter((i) => i.paymentSourceId === sourceId && i.date <= cutoffDate)
+      .reduce((s, i) => s + i.amount, 0);
+    const transIn = transfers
+      .filter((t) => t.toSourceId === sourceId && t.date <= cutoffDate)
+      .reduce((s, t) => s + t.amount, 0);
+    const exp = expenses
+      .filter((e) => e.paymentSourceId === sourceId && e.date <= cutoffDate)
+      .reduce((s, e) => s + e.amount, 0);
+    const transOut = transfers
+      .filter((t) => t.fromSourceId === sourceId && t.date <= cutoffDate)
+      .reduce((s, t) => s + t.amount, 0);
+
+    // Loans given
+    let loanGivenOut = 0;
+    let loanGivenRepaidIn = 0;
+    loans.filter((l) => l.type === 'given').forEach((l) => {
+      if (l.paymentSourceId === sourceId && l.date <= cutoffDate) {
+        loanGivenOut += l.amount;
+      }
+      (l.payments || []).forEach((p) => {
+        const pSrc = p.paymentSourceId || l.paymentSourceId;
+        if (pSrc === sourceId && p.date <= cutoffDate) {
+          loanGivenRepaidIn += p.amount;
+        }
+      });
+    });
+
+    // Loans taken
+    let loanTakenIn = 0;
+    let loanTakenRepaidOut = 0;
+    loans.filter((l) => l.type === 'taken').forEach((l) => {
+      if (l.paymentSourceId === sourceId && l.date <= cutoffDate) {
+        loanTakenIn += l.amount;
+      }
+      (l.payments || []).forEach((p) => {
+        const pSrc = p.paymentSourceId || l.paymentSourceId;
+        if (pSrc === sourceId && p.date <= cutoffDate) {
+          loanTakenRepaidOut += p.amount;
+        }
+      });
+    });
+
+    const totalIn = inc + transIn + loanGivenRepaidIn + loanTakenIn;
+    const totalOut = exp + transOut + loanGivenOut + loanTakenRepaidOut;
+    return totalIn - totalOut;
+  };
+
   // Total balance across ALL accounts up to last month end vs this month
   const lastMonthTotalAllBalances = useMemo(() => {
-    const inc = incomes.filter((i) => i.date <= prevCutoff).reduce((s, i) => s + i.amount, 0);
-    const exp = expenses.filter((e) => e.date <= prevCutoff).reduce((s, e) => s + e.amount, 0);
-    return inc - exp;
-  }, [incomes, expenses, prevCutoff]);
+    return paymentSources.reduce((sum, s) => sum + getSourceBalanceAtCutoff(s.id, prevCutoff), 0);
+  }, [paymentSources, incomes, expenses, transfers, loans, prevCutoff]);
 
   const thisMonthTotalAllBalances = useMemo(() => {
-    const inc = incomes.filter((i) => i.date <= currCutoff).reduce((s, i) => s + i.amount, 0);
-    const exp = expenses.filter((e) => e.date <= currCutoff).reduce((s, e) => s + e.amount, 0);
-    return inc - exp;
-  }, [incomes, expenses, currCutoff]);
+    return paymentSources.reduce((sum, s) => sum + getSourceBalanceAtCutoff(s.id, currCutoff), 0);
+  }, [paymentSources, incomes, expenses, transfers, loans, currCutoff]);
 
   const totalBalanceDiff = thisMonthTotalAllBalances - lastMonthTotalAllBalances;
 
   // Function to get balance at previous month end for a single source
   const getSourcePrevMonthBalance = (sourceId: string) => {
-    const inc = incomes
-      .filter((i) => i.paymentSourceId === sourceId && i.date <= prevCutoff)
-      .reduce((s, i) => s + i.amount, 0);
-    const transIn = transfers
-      .filter((t) => t.toSourceId === sourceId && t.date <= prevCutoff)
-      .reduce((s, t) => s + t.amount, 0);
-    const exp = expenses
-      .filter((e) => e.paymentSourceId === sourceId && e.date <= prevCutoff)
-      .reduce((s, e) => s + e.amount, 0);
-    const transOut = transfers
-      .filter((t) => t.fromSourceId === sourceId && t.date <= prevCutoff)
-      .reduce((s, t) => s + t.amount, 0);
-    return inc + transIn - (exp + transOut);
+    return getSourceBalanceAtCutoff(sourceId, prevCutoff);
   };
 
   // Currently selected source for viewing individual statement
@@ -217,37 +316,151 @@ export const BanksView: React.FC<BanksViewProps> = ({
         time: string;
         timestamp: number;
         direction: 'in' | 'out';
+      }
+    | {
+        type: 'loan_given';
+        loan: LoanRecord;
+        date: string;
+        time: string;
+        timestamp: number;
+        amount: number;
+      }
+    | {
+        type: 'loan_given_repaid';
+        loan: LoanRecord;
+        payment: LoanPayment;
+        date: string;
+        time: string;
+        timestamp: number;
+        amount: number;
+      }
+    | {
+        type: 'loan_taken';
+        loan: LoanRecord;
+        date: string;
+        time: string;
+        timestamp: number;
+        amount: number;
+      }
+    | {
+        type: 'loan_taken_repaid';
+        loan: LoanRecord;
+        payment: LoanPayment;
+        date: string;
+        time: string;
+        timestamp: number;
+        amount: number;
       };
 
-  const selectedSourceCombined: CombinedTx[] = [
-    ...selectedSourceExpenses.map((e) => ({
-      type: 'expense' as const,
-      data: e,
-      date: e.date,
-      time: e.time,
-      timestamp: e.createdAt,
-    })),
-    ...selectedSourceIncomes.map((i) => ({
-      type: 'income' as const,
-      data: i,
-      date: i.date,
-      time: i.time,
-      timestamp: i.createdAt,
-    })),
-    ...selectedSourceTransfers.map((t) => ({
-      type: 'transfer' as const,
-      data: t,
-      date: t.date,
-      time: t.time,
-      timestamp: t.createdAt,
-      direction: (t.toSourceId === selectedSourceId ? 'in' : 'out') as 'in' | 'out',
-    })),
-  ].sort((a, b) => {
-    if (a.date === b.date) {
-      return (b.time || '00:00').localeCompare(a.time || '00:00');
-    }
-    return b.date.localeCompare(a.date);
-  });
+  const selectedSourceCombined: CombinedTx[] = useMemo(() => {
+    if (!selectedSourceId) return [];
+
+    const items: CombinedTx[] = [
+      ...selectedSourceExpenses.map((e) => ({
+        type: 'expense' as const,
+        data: e,
+        date: e.date,
+        time: e.time,
+        timestamp: e.createdAt,
+      })),
+      ...selectedSourceIncomes.map((i) => ({
+        type: 'income' as const,
+        data: i,
+        date: i.date,
+        time: i.time,
+        timestamp: i.createdAt,
+      })),
+      ...selectedSourceTransfers.map((t) => ({
+        type: 'transfer' as const,
+        data: t,
+        date: t.date,
+        time: t.time,
+        timestamp: t.createdAt,
+        direction: (t.toSourceId === selectedSourceId ? 'in' : 'out') as 'in' | 'out',
+      })),
+    ];
+
+    // Loans Given (Money lent out from this source)
+    loans
+      .filter((l) => l.type === 'given' && l.paymentSourceId === selectedSourceId)
+      .forEach((l) => {
+        items.push({
+          type: 'loan_given',
+          loan: l,
+          date: l.date,
+          time: '12:00',
+          timestamp: l.createdAt,
+          amount: l.amount,
+        });
+      });
+
+    // Loans Given Repaid In (Money repaid into this source)
+    loans
+      .filter((l) => l.type === 'given')
+      .forEach((l) => {
+        (l.payments || []).forEach((p) => {
+          const pSrc = p.paymentSourceId || l.paymentSourceId;
+          if (pSrc === selectedSourceId) {
+            items.push({
+              type: 'loan_given_repaid',
+              loan: l,
+              payment: p,
+              date: p.date,
+              time: '12:00',
+              timestamp: l.createdAt + 1,
+              amount: p.amount,
+            });
+          }
+        });
+      });
+
+    // Loans Taken In (Money borrowed into this source)
+    loans
+      .filter((l) => l.type === 'taken' && l.paymentSourceId === selectedSourceId)
+      .forEach((l) => {
+        items.push({
+          type: 'loan_taken',
+          loan: l,
+          date: l.date,
+          time: '12:00',
+          timestamp: l.createdAt,
+          amount: l.amount,
+        });
+      });
+
+    // Loans Taken Repaid Out (Money repaid from this source)
+    loans
+      .filter((l) => l.type === 'taken')
+      .forEach((l) => {
+        (l.payments || []).forEach((p) => {
+          const pSrc = p.paymentSourceId || l.paymentSourceId;
+          if (pSrc === selectedSourceId) {
+            items.push({
+              type: 'loan_taken_repaid',
+              loan: l,
+              payment: p,
+              date: p.date,
+              time: '12:00',
+              timestamp: l.createdAt + 1,
+              amount: p.amount,
+            });
+          }
+        });
+      });
+
+    return items.sort((a, b) => {
+      if (a.date === b.date) {
+        return (b.time || '00:00').localeCompare(a.time || '00:00');
+      }
+      return b.date.localeCompare(a.date);
+    });
+  }, [
+    selectedSourceId,
+    selectedSourceExpenses,
+    selectedSourceIncomes,
+    selectedSourceTransfers,
+    loans,
+  ]);
 
   return (
     <div className="space-y-4 pb-20">
@@ -258,7 +471,7 @@ export const BanksView: React.FC<BanksViewProps> = ({
             ব্যাংক ও ক্যাশ একাউন্টস
           </h3>
           <p className="text-xs text-slate-500 mt-0.5">
-            কোন ব্যাংকে কত টাকা জমা হয়েছে ও কত খরচ হয়েছে তার স্থিতি
+            কোন ব্যাংকে কত টাকা জমা হয়েছে, কত খরচ হয়েছে ও লোন সমন্বয়
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -391,9 +604,20 @@ export const BanksView: React.FC<BanksViewProps> = ({
           const totalSpent = getSourceExpenseTotal(source.id);
           const transIn = getSourceTransfersInTotal(source.id);
           const transOut = getSourceTransfersOutTotal(source.id);
+          const loanGivenOut = getSourceLoansGivenOutTotal(source.id);
+          const loanGivenRepaidIn = getSourceLoansGivenRepaidInTotal(source.id);
+          const loanTakenIn = getSourceLoansTakenInTotal(source.id);
+          const loanTakenRepaidOut = getSourceLoansTakenRepaidOutTotal(source.id);
+
           const balance = getSourceBalance(source.id);
           const { total } = getSourceTxCount(source.id);
           const isSelected = selectedSourceId === source.id;
+
+          const hasLoans =
+            loanGivenOut > 0 ||
+            loanGivenRepaidIn > 0 ||
+            loanTakenIn > 0 ||
+            loanTakenRepaidOut > 0;
 
           return (
             <div
@@ -518,6 +742,38 @@ export const BanksView: React.FC<BanksViewProps> = ({
                 </div>
               </div>
 
+              {/* Loan Impact summary for this account if any */}
+              {hasLoans && (
+                <div className="mt-2 bg-amber-50/90 p-1.5 px-2.5 rounded-xl text-[10px] text-amber-950 flex flex-wrap items-center justify-between gap-1 border border-amber-200/80">
+                  <span className="flex items-center gap-1 font-medium text-amber-800">
+                    <HandCoins className="w-3 h-3 text-amber-600" />
+                    <span>লোন সমন্বয় (দেনা/পাওনা):</span>
+                  </span>
+                  <span className="font-bold flex items-center gap-1.5 flex-wrap">
+                    {loanGivenOut > 0 && (
+                      <span className="text-rose-700" title="কাউকে লোন দেওয়া">
+                        দেওয়া -{formatCurrency(loanGivenOut)}
+                      </span>
+                    )}
+                    {loanGivenRepaidIn > 0 && (
+                      <span className="text-emerald-700" title="দেওয়া লোন ফেরত আদায়">
+                        আদায় +{formatCurrency(loanGivenRepaidIn)}
+                      </span>
+                    )}
+                    {loanTakenIn > 0 && (
+                      <span className="text-emerald-700" title="কারো থেকে ঋণ গ্রহণ">
+                        ঋণ +{formatCurrency(loanTakenIn)}
+                      </span>
+                    )}
+                    {loanTakenRepaidOut > 0 && (
+                      <span className="text-rose-700" title="ঋণ শোধ">
+                        শোধ -{formatCurrency(loanTakenRepaidOut)}
+                      </span>
+                    )}
+                  </span>
+                </div>
+              )}
+
               {/* Non-expense Transfer summary for this account if any */}
               {(transIn > 0 || transOut > 0) && (
                 <div className="mt-2 bg-indigo-50/80 p-1.5 px-2.5 rounded-xl text-[10px] text-indigo-900 flex items-center justify-between border border-indigo-100">
@@ -626,12 +882,12 @@ export const BanksView: React.FC<BanksViewProps> = ({
               এই ব্যাংক বা মাধ্যম থেকে এখনো কোনো লেনদেন লিপিবদ্ধ করা হয়নি।
             </div>
           ) : (
-            selectedSourceCombined.map((tx) => {
+            selectedSourceCombined.map((tx, idx) => {
               if (tx.type === 'expense') {
                 const cat = categories.find((c) => c.id === tx.data.categoryId);
                 return (
                   <ExpenseItem
-                    key={`exp-${tx.data.id}`}
+                    key={`exp-${tx.data.id}-${idx}`}
                     expense={tx.data}
                     category={cat}
                     categories={categories}
@@ -645,7 +901,7 @@ export const BanksView: React.FC<BanksViewProps> = ({
                 const cat = incomeCategories.find((c) => c.id === tx.data.categoryId);
                 return (
                   <IncomeItem
-                    key={`inc-${tx.data.id}`}
+                    key={`inc-${tx.data.id}-${idx}`}
                     income={tx.data}
                     category={cat}
                     paymentSource={selectedSource}
@@ -654,12 +910,12 @@ export const BanksView: React.FC<BanksViewProps> = ({
                     showDate={true}
                   />
                 );
-              } else {
+              } else if (tx.type === 'transfer') {
                 const fromSrc = paymentSources.find((s) => s.id === tx.data.fromSourceId);
                 const toSrc = paymentSources.find((s) => s.id === tx.data.toSourceId);
                 return (
                   <TransferItem
-                    key={`trans-${tx.data.id}-${tx.direction}`}
+                    key={`trans-${tx.data.id}-${tx.direction}-${idx}`}
                     transfer={tx.data}
                     fromSource={fromSrc}
                     toSource={toSrc}
@@ -667,6 +923,175 @@ export const BanksView: React.FC<BanksViewProps> = ({
                     onDelete={onDeleteTransfer || (() => {})}
                     showDate={true}
                   />
+                );
+              } else if (tx.type === 'loan_given') {
+                return (
+                  <div
+                    key={`loan-given-${tx.loan.id}-${idx}`}
+                    className="bg-white rounded-2xl p-3.5 border border-slate-100 shadow-xs flex items-center justify-between gap-3 hover:border-slate-200 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center shrink-0 border border-amber-200/60">
+                        <HandCoins className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h5 className="font-bold text-slate-800 text-xs sm:text-sm">
+                            লোন প্রদান: {tx.loan.personName}
+                          </h5>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
+                            কাউকে দেওয়া (মাইনাস)
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
+                          <span>{formatBengaliDate(tx.date)}</span>
+                          {tx.loan.note && (
+                            <>
+                              <span>•</span>
+                              <span className="truncate max-w-[140px] sm:max-w-xs text-slate-500">
+                                {tx.loan.note}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className="font-black text-xs sm:text-sm text-rose-600 block">
+                        -{formatCurrency(tx.amount)}
+                      </span>
+                      <span className="text-[10px] text-slate-400 block mt-0.5">
+                        অ্যাকাউন্ট থেকে কর্তন
+                      </span>
+                    </div>
+                  </div>
+                );
+              } else if (tx.type === 'loan_given_repaid') {
+                return (
+                  <div
+                    key={`loan-given-repaid-${tx.payment.id}-${idx}`}
+                    className="bg-white rounded-2xl p-3.5 border border-slate-100 shadow-xs flex items-center justify-between gap-3 hover:border-slate-200 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-200/60">
+                        <ArrowDownLeft className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h5 className="font-bold text-slate-800 text-xs sm:text-sm">
+                            লোন ফেরত আদায়: {tx.loan.personName}
+                          </h5>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            টাকা ফেরত (প্লাস)
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
+                          <span>{formatBengaliDate(tx.date)}</span>
+                          {tx.payment.note && (
+                            <>
+                              <span>•</span>
+                              <span className="truncate max-w-[140px] sm:max-w-xs text-slate-500">
+                                {tx.payment.note}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className="font-black text-xs sm:text-sm text-emerald-600 block">
+                        +{formatCurrency(tx.amount)}
+                      </span>
+                      <span className="text-[10px] text-slate-400 block mt-0.5">
+                        অ্যাকাউন্টে জমা
+                      </span>
+                    </div>
+                  </div>
+                );
+              } else if (tx.type === 'loan_taken') {
+                return (
+                  <div
+                    key={`loan-taken-${tx.loan.id}-${idx}`}
+                    className="bg-white rounded-2xl p-3.5 border border-slate-100 shadow-xs flex items-center justify-between gap-3 hover:border-slate-200 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-200/60">
+                        <ArrowDownLeft className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h5 className="font-bold text-slate-800 text-xs sm:text-sm">
+                            লোন গ্রহণ (ঋণ): {tx.loan.personName}
+                          </h5>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            ধার নেওয়া (প্লাস)
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
+                          <span>{formatBengaliDate(tx.date)}</span>
+                          {tx.loan.note && (
+                            <>
+                              <span>•</span>
+                              <span className="truncate max-w-[140px] sm:max-w-xs text-slate-500">
+                                {tx.loan.note}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className="font-black text-xs sm:text-sm text-emerald-600 block">
+                        +{formatCurrency(tx.amount)}
+                      </span>
+                      <span className="text-[10px] text-slate-400 block mt-0.5">
+                        অ্যাকাউন্টে জমা
+                      </span>
+                    </div>
+                  </div>
+                );
+              } else {
+                // loan_taken_repaid
+                return (
+                  <div
+                    key={`loan-taken-repaid-${tx.payment.id}-${idx}`}
+                    className="bg-white rounded-2xl p-3.5 border border-slate-100 shadow-xs flex items-center justify-between gap-3 hover:border-slate-200 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-700 flex items-center justify-center shrink-0 border border-rose-200/60">
+                        <ArrowUpRight className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h5 className="font-bold text-slate-800 text-xs sm:text-sm">
+                            ঋণ পরিশোধ: {tx.loan.personName}
+                          </h5>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
+                            দেনা শোধ (মাইনাস)
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
+                          <span>{formatBengaliDate(tx.date)}</span>
+                          {tx.payment.note && (
+                            <>
+                              <span>•</span>
+                              <span className="truncate max-w-[140px] sm:max-w-xs text-slate-500">
+                                {tx.payment.note}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className="font-black text-xs sm:text-sm text-rose-600 block">
+                        -{formatCurrency(tx.amount)}
+                      </span>
+                      <span className="text-[10px] text-slate-400 block mt-0.5">
+                        অ্যাকাউন্ট থেকে কর্তন
+                      </span>
+                    </div>
+                  </div>
                 );
               }
             })
