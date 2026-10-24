@@ -89,12 +89,14 @@ export const AVAILABLE_ICONS = [
 ];
 
 interface CategoryIconProps {
-  name: string;
+  name?: string;
+  iconName?: string;
   className?: string;
   size?: number;
 }
 
-export const CategoryIcon: React.FC<CategoryIconProps> = ({ name, className = 'w-5 h-5', size }) => {
-  const IconComponent = ICON_MAP[name] || CircleDot;
+export const CategoryIcon: React.FC<CategoryIconProps> = ({ name, iconName, className = 'w-5 h-5', size }) => {
+  const iconKey = name || iconName || 'CircleDot';
+  const IconComponent = ICON_MAP[iconKey] || CircleDot;
   return <IconComponent className={className} size={size} />;
 };

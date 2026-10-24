@@ -16,6 +16,8 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   ArrowRight,
+  X,
+  Receipt,
 } from 'lucide-react';
 import {
   Expense,
@@ -71,6 +73,16 @@ export const MonthlyView: React.FC<MonthlyViewProps> = ({
   >('categories');
   const [listFilter, setListFilter] = useState<'all' | 'expense' | 'income'>('all');
 
+  // Drilldown modal for viewing transactions of a selected subcategory or category
+  interface DrilldownTarget {
+    type: 'expense-sub' | 'expense-main' | 'expense-direct' | 'income-cat';
+    categoryId: string;
+    subCategory?: ExpenseCategory;
+    mainCategory?: ExpenseCategory;
+    incomeCategory?: IncomeCategory;
+  }
+  const [selectedDrilldown, setSelectedDrilldown] = useState<DrilldownTarget | null>(null);
+
   // Navigate months
   const handlePrevMonth = () => {
     if (selectedMonth === 1) {
@@ -99,6 +111,105 @@ export const MonthlyView: React.FC<MonthlyViewProps> = ({
   const monthIncomes = useMemo(() => {
     return incomes.filter((i) => i.date.startsWith(monthPrefix));
   }, [incomes, monthPrefix]);
+
+  // Drilldown data computed dynamically so edits/deletions update immediately
+  const drilldownData = useMemo(() => {
+    if (!selectedDrilldown) return null;
+
+    if (selectedDrilldown.type === 'expense-sub') {
+      const sub = selectedDrilldown.subCategory;
+      const main = selectedDrilldown.mainCategory;
+      const items = monthExpenses
+        .filter((e) => e.categoryId === selectedDrilldown.categoryId)
+        .sort((a, b) => {
+          if (a.date === b.date) return (b.time || '00:00').localeCompare(a.time || '00:00');
+          return b.date.localeCompare(a.date);
+        });
+      const totalAmount = items.reduce((sum, e) => sum + e.amount, 0);
+
+      return {
+        type: 'expense' as const,
+        title: sub?.name || 'উপ-খাত',
+        parentTitle: main?.name,
+        color: sub?.color || main?.color || '#6366f1',
+        icon: sub?.icon || main?.icon || 'Layers',
+        badge: 'উপ-খাত',
+        items,
+        totalAmount,
+      };
+    }
+
+    if (selectedDrilldown.type === 'expense-direct') {
+      const main = selectedDrilldown.mainCategory;
+      const items = monthExpenses
+        .filter((e) => e.categoryId === selectedDrilldown.categoryId)
+        .sort((a, b) => {
+          if (a.date === b.date) return (b.time || '00:00').localeCompare(a.time || '00:00');
+          return b.date.localeCompare(a.date);
+        });
+      const totalAmount = items.reduce((sum, e) => sum + e.amount, 0);
+
+      return {
+        type: 'expense' as const,
+        title: `${main?.name || 'প্রধান খাত'} (সরাসরি)`,
+        parentTitle: main?.name,
+        color: main?.color || '#6366f1',
+        icon: main?.icon || 'Layers',
+        badge: 'সরাসরি খরচ',
+        items,
+        totalAmount,
+      };
+    }
+
+    if (selectedDrilldown.type === 'expense-main') {
+      const main = selectedDrilldown.mainCategory;
+      const subIds = categories
+        .filter((c) => c.parentId === selectedDrilldown.categoryId)
+        .map((c) => c.id);
+      const items = monthExpenses
+        .filter((e) => e.categoryId === selectedDrilldown.categoryId || subIds.includes(e.categoryId))
+        .sort((a, b) => {
+          if (a.date === b.date) return (b.time || '00:00').localeCompare(a.time || '00:00');
+          return b.date.localeCompare(a.date);
+        });
+      const totalAmount = items.reduce((sum, e) => sum + e.amount, 0);
+
+      return {
+        type: 'expense' as const,
+        title: main?.name || 'প্রধান খাত',
+        parentTitle: undefined,
+        color: main?.color || '#6366f1',
+        icon: main?.icon || 'Layers',
+        badge: 'প্রধান খাত (সব উপখাতসহ)',
+        items,
+        totalAmount,
+      };
+    }
+
+    if (selectedDrilldown.type === 'income-cat') {
+      const incCat = selectedDrilldown.incomeCategory;
+      const items = monthIncomes
+        .filter((i) => i.categoryId === selectedDrilldown.categoryId)
+        .sort((a, b) => {
+          if (a.date === b.date) return (b.time || '00:00').localeCompare(a.time || '00:00');
+          return b.date.localeCompare(a.date);
+        });
+      const totalAmount = items.reduce((sum, i) => sum + i.amount, 0);
+
+      return {
+        type: 'income' as const,
+        title: incCat?.name || 'আয়ের উৎস',
+        parentTitle: undefined,
+        color: incCat?.color || '#10b981',
+        icon: incCat?.icon || 'Coins',
+        badge: 'আয়ের উৎস',
+        items,
+        totalAmount,
+      };
+    }
+
+    return null;
+  }, [selectedDrilldown, monthExpenses, monthIncomes, categories]);
 
   // Total amounts
   const totalMonthExpense = useMemo(() => {
@@ -759,28 +870,55 @@ export const MonthlyView: React.FC<MonthlyViewProps> = ({
                     className="bg-white rounded-2xl p-4 border border-slate-100 shadow-xs space-y-3"
                   >
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSelectedDrilldown({
+                            type: 'expense-main',
+                            categoryId: mainCategory.id,
+                            mainCategory,
+                          })
+                        }
+                        className="flex items-center gap-3 text-left group cursor-pointer"
+                        title={`${mainCategory.name} এর সকল লেনদেন দেখুন`}
+                      >
                         <div
-                          className="w-10 h-10 rounded-xl text-white flex items-center justify-center shrink-0 shadow-xs"
+                          className="w-10 h-10 rounded-xl text-white flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform"
                           style={{ backgroundColor: mainCategory.color }}
                         >
                           <CategoryIcon iconName={mainCategory.icon} className="w-5 h-5" />
                         </div>
                         <div>
-                          <h5 className="font-bold text-slate-800 text-sm">
-                            {mainCategory.name}
-                          </h5>
+                          <div className="flex items-center gap-1.5">
+                            <h5 className="font-bold text-slate-800 text-sm group-hover:text-indigo-700 transition-colors">
+                              {mainCategory.name}
+                            </h5>
+                            <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-medium group-hover:bg-indigo-50 group-hover:text-indigo-700 transition-colors">
+                              সব দেখুন ›
+                            </span>
+                          </div>
                           <span className="text-xs text-slate-400">
                             মোট {toBengaliNumber(count)} টি খরচ ({toBengaliNumber(percentage)}%)
                           </span>
                         </div>
-                      </div>
+                      </button>
 
-                      <div className="text-right">
-                        <div className="font-extrabold text-slate-900 text-base">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSelectedDrilldown({
+                            type: 'expense-main',
+                            categoryId: mainCategory.id,
+                            mainCategory,
+                          })
+                        }
+                        className="text-right cursor-pointer group"
+                        title={`${mainCategory.name} এর সকল লেনদেন দেখুন`}
+                      >
+                        <div className="font-extrabold text-slate-900 text-base whitespace-nowrap group-hover:text-indigo-700 transition-colors">
                           {formatCurrency(total)}
                         </div>
-                      </div>
+                      </button>
                     </div>
 
                     {/* Progress Bar */}
@@ -795,40 +933,92 @@ export const MonthlyView: React.FC<MonthlyViewProps> = ({
                     </div>
 
                     {/* Sub-categories */}
-                    {subCategories.length > 0 && (
-                      <div className="pt-2 border-t border-slate-50 space-y-1.5">
-                        <div className="text-[11px] font-semibold text-slate-400">
-                          উপ-খাতসমূহ:
+                    {(subCategories.length > 0 || directCount > 0) && (
+                      <div className="pt-2.5 border-t border-slate-100 space-y-1.5">
+                        <div className="flex items-center justify-between text-[11px] font-semibold text-slate-400 px-0.5">
+                          <span>উপ-খাতসমূহ (লেনদেন দেখতে চাপুন):</span>
+                          <span className="text-[10px] text-indigo-600 font-medium">
+                            ক্লিক করুন ›
+                          </span>
                         </div>
+
                         {subCategories.map(({ category: sub, total: subTotal, count: subCount }) => {
                           const subPercentage =
                             total > 0 ? Math.round((subTotal / total) * 100) : 0;
                           return (
-                            <div
+                            <button
                               key={sub.id}
-                              className="flex items-center justify-between text-xs py-1 px-2 rounded-lg bg-slate-50/70"
+                              type="button"
+                              onClick={() =>
+                                setSelectedDrilldown({
+                                  type: 'expense-sub',
+                                  categoryId: sub.id,
+                                  subCategory: sub,
+                                  mainCategory,
+                                })
+                              }
+                              className="w-full flex items-center justify-between text-xs py-2 px-2.5 rounded-xl bg-slate-50 hover:bg-indigo-50/80 active:bg-indigo-100/70 border border-slate-100/80 hover:border-indigo-200 transition-all cursor-pointer group text-left active:scale-[0.99]"
+                              title={`${sub.name} এর সকল লেনদেন দেখুন`}
                             >
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 min-w-0 pr-2">
                                 <span
-                                  className="w-2 h-2 rounded-full"
+                                  className="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs"
                                   style={{ backgroundColor: sub.color }}
                                 />
-                                <span className="font-medium text-slate-700">{sub.name}</span>
-                                <span className="text-[10px] text-slate-400">
-                                  ({toBengaliNumber(subCount)})
+                                <span className="font-semibold text-slate-700 group-hover:text-indigo-900 truncate">
+                                  {sub.name}
+                                </span>
+                                <span className="text-[10px] text-indigo-600 font-semibold bg-indigo-50/90 group-hover:bg-white px-1.5 py-0.5 rounded-md shrink-0 border border-indigo-100/60">
+                                  {toBengaliNumber(subCount)} টি
                                 </span>
                               </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-[11px] text-slate-400">
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className="text-[11px] text-slate-400 font-medium">
                                   {toBengaliNumber(subPercentage)}%
                                 </span>
-                                <span className="font-bold text-slate-800">
+                                <span className="font-extrabold text-slate-800 group-hover:text-indigo-950 whitespace-nowrap">
                                   {formatCurrency(subTotal)}
                                 </span>
+                                <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-indigo-600 group-hover:translate-x-0.5 transition-all shrink-0" />
                               </div>
-                            </div>
+                            </button>
                           );
                         })}
+
+                        {/* Direct expenses under main category if any */}
+                        {directCount > 0 && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setSelectedDrilldown({
+                                type: 'expense-direct',
+                                categoryId: mainCategory.id,
+                                mainCategory,
+                              })
+                            }
+                            className="w-full flex items-center justify-between text-xs py-2 px-2.5 rounded-xl bg-slate-50 hover:bg-indigo-50/80 active:bg-indigo-100/70 border border-slate-100/80 hover:border-indigo-200 transition-all cursor-pointer group text-left active:scale-[0.99]"
+                            title={`${mainCategory.name} এ সরাসরি খরচের লেনদেন দেখুন`}
+                          >
+                            <div className="flex items-center gap-2 min-w-0 pr-2">
+                              <span className="w-2.5 h-2.5 rounded-full bg-slate-400 shrink-0" />
+                              <span className="font-semibold text-slate-700 group-hover:text-indigo-900 truncate">
+                                সরাসরি প্রধান খাতে খরচ
+                              </span>
+                              <span className="text-[10px] text-indigo-600 font-semibold bg-indigo-50/90 group-hover:bg-white px-1.5 py-0.5 rounded-md shrink-0 border border-indigo-100/60">
+                                {toBengaliNumber(directCount)} টি
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="text-[11px] text-slate-400 font-medium">
+                                {toBengaliNumber(total > 0 ? Math.round((directTotal / total) * 100) : 0)}%
+                              </span>
+                              <span className="font-extrabold text-slate-800 group-hover:text-indigo-950 whitespace-nowrap">
+                                {formatCurrency(directTotal)}
+                              </span>
+                              <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-indigo-600 group-hover:translate-x-0.5 transition-all shrink-0" />
+                            </div>
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -864,16 +1054,34 @@ export const MonthlyView: React.FC<MonthlyViewProps> = ({
                   key={category.id}
                   className="bg-white rounded-2xl p-4 border border-slate-100 shadow-xs space-y-2.5"
                 >
-                  <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSelectedDrilldown({
+                        type: 'income-cat',
+                        categoryId: category.id,
+                        incomeCategory: category,
+                      })
+                    }
+                    className="w-full flex items-center justify-between text-left group cursor-pointer"
+                    title={`${category.name} এর লেনদেন দেখুন`}
+                  >
                     <div className="flex items-center gap-3">
                       <div
-                        className="w-10 h-10 rounded-xl text-white flex items-center justify-center shrink-0 shadow-xs"
+                        className="w-10 h-10 rounded-xl text-white flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform"
                         style={{ backgroundColor: category.color }}
                       >
                         <CategoryIcon iconName={category.icon} className="w-5 h-5" />
                       </div>
                       <div>
-                        <h5 className="font-bold text-slate-800 text-sm">{category.name}</h5>
+                        <div className="flex items-center gap-1.5">
+                          <h5 className="font-bold text-slate-800 text-sm group-hover:text-emerald-700 transition-colors">
+                            {category.name}
+                          </h5>
+                          <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-medium group-hover:bg-emerald-50 group-hover:text-emerald-700 transition-colors">
+                            লেনদেন দেখুন ›
+                          </span>
+                        </div>
                         <span className="text-xs text-slate-400">
                           {toBengaliNumber(count)} টি জমা ({toBengaliNumber(percentage)}%)
                         </span>
@@ -881,11 +1089,11 @@ export const MonthlyView: React.FC<MonthlyViewProps> = ({
                     </div>
 
                     <div className="text-right">
-                      <div className="font-extrabold text-emerald-600 text-base">
+                      <div className="font-extrabold text-emerald-600 text-base whitespace-nowrap">
                         +{formatCurrency(total)}
                       </div>
                     </div>
-                  </div>
+                  </button>
 
                   {/* Progress bar */}
                   <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
@@ -1111,6 +1319,160 @@ export const MonthlyView: React.FC<MonthlyViewProps> = ({
               }
             })
           )}
+        </div>
+      )}
+
+      {/* Category / Sub-category Drilldown Modal */}
+      {selectedDrilldown && drilldownData && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150"
+          onClick={() => setSelectedDrilldown(null)}
+        >
+          <div
+            id="modal-category-drilldown"
+            className="w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl max-h-[88vh] flex flex-col shadow-2xl border border-slate-100 animate-in slide-in-from-bottom sm:zoom-in-95 duration-200 overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
+            {/* Modal Drag Handle for mobile */}
+            <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mt-2.5 mb-1 sm:hidden shrink-0" />
+
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-5 pt-3 pb-3 border-b border-slate-100 shrink-0">
+              <div className="flex items-center gap-3 min-w-0 pr-2">
+                <div
+                  className="w-11 h-11 rounded-2xl text-white flex items-center justify-center shrink-0 shadow-sm"
+                  style={{ backgroundColor: drilldownData.color }}
+                >
+                  <CategoryIcon iconName={drilldownData.icon} className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {drilldownData.parentTitle && (
+                      <span className="text-xs text-slate-400 font-medium truncate">
+                        {drilldownData.parentTitle} ›
+                      </span>
+                    )}
+                    <h3 className="text-base sm:text-lg font-bold text-slate-900 truncate">
+                      {drilldownData.title}
+                    </h3>
+                  </div>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-[11px] font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md">
+                      {drilldownData.badge}
+                    </span>
+                    <span className="text-[11px] text-slate-400">
+                      {BENGALI_MONTHS[selectedMonth - 1]} {toBengaliNumber(selectedYear)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSelectedDrilldown(null)}
+                className="p-2 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors shrink-0 cursor-pointer"
+                title="বন্ধ করুন"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Total Amount & Stats Bar */}
+            <div className="px-5 py-3 bg-slate-50 border-b border-slate-100 flex items-center justify-between shrink-0">
+              <div>
+                <span className="text-[11px] text-slate-500 font-medium block">
+                  {drilldownData.type === 'expense' ? 'মোট খরচের পরিমাণ:' : 'মোট জমার পরিমাণ:'}
+                </span>
+                <span
+                  className={`text-lg sm:text-xl font-black whitespace-nowrap tracking-tight ${
+                    drilldownData.type === 'expense' ? 'text-rose-600' : 'text-emerald-600'
+                  }`}
+                >
+                  {drilldownData.type === 'expense' ? '-' : '+'}
+                  {formatCurrency(drilldownData.totalAmount)}
+                </span>
+              </div>
+              <div className="text-right">
+                <span className="text-[11px] text-slate-500 font-medium block">
+                  লেনদেন সংখ্যা:
+                </span>
+                <span className="text-sm font-bold text-slate-800 bg-white px-2.5 py-1 rounded-lg border border-slate-200/80 shadow-2xs inline-block">
+                  {toBengaliNumber(drilldownData.items.length)} টি
+                </span>
+              </div>
+            </div>
+
+            {/* Transaction List */}
+            <div className="p-4 overflow-y-auto space-y-2.5 flex-1 min-h-[220px]">
+              {drilldownData.items.length === 0 ? (
+                <div className="flex flex-col items-center justify-center text-center py-12 px-4 text-slate-400">
+                  <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 mb-3">
+                    <Receipt className="w-7 h-7" />
+                  </div>
+                  <p className="font-bold text-slate-700 text-sm">
+                    কোনো লেনদেনের রেকর্ড নেই
+                  </p>
+                  <p className="text-xs text-slate-400 mt-1 max-w-xs">
+                    {drilldownData.type === 'expense'
+                      ? 'এই খাতে এই মাসে কোনো খরচের হিসাব পাওয়া যায়নি বা মুছে ফেলা হয়েছে।'
+                      : 'এই খাতে এই মাসে কোনো আয়ের হিসাব পাওয়া যায়নি।'}
+                  </p>
+                </div>
+              ) : (
+                drilldownData.items.map((item) => {
+                  if (drilldownData.type === 'expense') {
+                    const exp = item as Expense;
+                    const cat = categories.find((c) => c.id === exp.categoryId);
+                    const src = paymentSources.find((s) => s.id === exp.paymentSourceId);
+                    return (
+                      <ExpenseItem
+                        key={exp.id}
+                        expense={exp}
+                        category={cat}
+                        categories={categories}
+                        paymentSource={src}
+                        onEdit={(e) => {
+                          onEditExpense(e);
+                        }}
+                        onDelete={(id) => {
+                          onDeleteExpense(id);
+                        }}
+                        showDate={true}
+                      />
+                    );
+                  } else {
+                    const inc = item as Income;
+                    const cat = incomeCategories.find((c) => c.id === inc.categoryId);
+                    const src = paymentSources.find((s) => s.id === inc.paymentSourceId);
+                    return (
+                      <IncomeItem
+                        key={inc.id}
+                        income={inc}
+                        category={cat}
+                        paymentSource={src}
+                        onEdit={(i) => onEditIncome?.(i)}
+                        onDelete={(id) => onDeleteIncome?.(id)}
+                        showDate={true}
+                      />
+                    );
+                  }
+                })
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-3.5 bg-white border-t border-slate-100 flex items-center justify-end shrink-0">
+              <button
+                type="button"
+                onClick={() => setSelectedDrilldown(null)}
+                className="w-full sm:w-auto px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+              >
+                বন্ধ করুন
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
