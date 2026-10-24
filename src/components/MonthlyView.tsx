@@ -417,6 +417,13 @@ export const MonthlyView: React.FC<MonthlyViewProps> = ({
     return b.data.date.localeCompare(a.data.date);
   });
 
+  // Helper to scale font size down slightly for longer numbers so amounts NEVER wrap or break across lines
+  const getBannerAmountClass = (valStr: string) => {
+    if (valStr.length > 14) return 'text-[10px] min-[360px]:text-[11px] sm:text-xs';
+    if (valStr.length > 11) return 'text-[11px] min-[360px]:text-xs sm:text-sm';
+    return 'text-xs min-[360px]:text-sm sm:text-base';
+  };
+
   return (
     <div className="space-y-4 pb-20">
       {/* Month Selector Bar */}
@@ -448,9 +455,9 @@ export const MonthlyView: React.FC<MonthlyViewProps> = ({
       </div>
 
       {/* Main Monthly Total Banner with Incomes, Expenses, and Savings */}
-      <div className="bg-linear-to-br from-indigo-700 via-indigo-600 to-violet-700 rounded-3xl p-5 text-white shadow-xl shadow-indigo-600/20 relative overflow-hidden">
+      <div className="bg-linear-to-br from-indigo-700 via-indigo-600 to-violet-700 rounded-3xl p-4 sm:p-5 text-white shadow-xl shadow-indigo-600/20 relative overflow-hidden">
         <div className="absolute -right-8 -bottom-8 w-36 h-36 rounded-full bg-white/10 pointer-events-none" />
-        <div className="relative z-10 space-y-4">
+        <div className="relative z-10 space-y-3.5">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-indigo-200 flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5" />
@@ -464,36 +471,49 @@ export const MonthlyView: React.FC<MonthlyViewProps> = ({
           </div>
 
           {/* Income vs Expense vs Net Savings */}
-          <div className="grid grid-cols-3 gap-2">
-            <div className="bg-white/10 backdrop-blur-xs rounded-2xl p-2.5">
-              <div className="flex items-center gap-1 text-emerald-200 text-[11px] font-medium">
-                <ArrowDownLeft className="w-3.5 h-3.5 stroke-[2.5]" />
-                <span>মোট আয়/জমা</span>
+          <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+            <div className="bg-white/10 backdrop-blur-xs rounded-2xl p-2 sm:p-2.5 overflow-hidden">
+              <div className="flex items-center gap-1 text-emerald-200 text-[10px] sm:text-[11px] font-semibold whitespace-nowrap">
+                <ArrowDownLeft className="w-3 h-3 sm:w-3.5 sm:h-3.5 stroke-[2.5] shrink-0" />
+                <span className="truncate">মোট আয়/জমা</span>
               </div>
-              <div className="font-extrabold text-sm sm:text-base mt-0.5 text-white break-words leading-tight">
+              <div
+                className={`font-black mt-1 text-white whitespace-nowrap tracking-tight leading-none overflow-hidden ${getBannerAmountClass(
+                  `+${formatCurrency(totalMonthIncome)}`
+                )}`}
+                title={`+${formatCurrency(totalMonthIncome)}`}
+              >
                 +{formatCurrency(totalMonthIncome)}
               </div>
             </div>
 
-            <div className="bg-white/10 backdrop-blur-xs rounded-2xl p-2.5">
-              <div className="flex items-center gap-1 text-rose-200 text-[11px] font-medium">
-                <TrendingDown className="w-3.5 h-3.5" />
-                <span>মোট খরচ</span>
+            <div className="bg-white/10 backdrop-blur-xs rounded-2xl p-2 sm:p-2.5 overflow-hidden">
+              <div className="flex items-center gap-1 text-rose-200 text-[10px] sm:text-[11px] font-semibold whitespace-nowrap">
+                <TrendingDown className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                <span className="truncate">মোট খরচ</span>
               </div>
-              <div className="font-extrabold text-sm sm:text-base mt-0.5 text-rose-100 break-words leading-tight">
+              <div
+                className={`font-black mt-1 text-rose-100 whitespace-nowrap tracking-tight leading-none overflow-hidden ${getBannerAmountClass(
+                  `-${formatCurrency(totalMonthExpense)}`
+                )}`}
+                title={`-${formatCurrency(totalMonthExpense)}`}
+              >
                 -{formatCurrency(totalMonthExpense)}
               </div>
             </div>
 
-            <div className="bg-white/15 backdrop-blur-xs rounded-2xl p-2.5 ring-1 ring-white/20">
-              <div className="flex items-center gap-1 text-indigo-200 text-[11px] font-medium">
-                <Wallet className="w-3.5 h-3.5" />
-                <span>মাসিক স্থিতি</span>
+            <div className="bg-white/15 backdrop-blur-xs rounded-2xl p-2 sm:p-2.5 ring-1 ring-white/20 overflow-hidden">
+              <div className="flex items-center gap-1 text-indigo-200 text-[10px] sm:text-[11px] font-semibold whitespace-nowrap">
+                <Wallet className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                <span className="truncate">মাসিক স্থিতি</span>
               </div>
               <div
-                className={`font-extrabold text-sm sm:text-base mt-0.5 break-words leading-tight ${
+                className={`font-black mt-1 whitespace-nowrap tracking-tight leading-none overflow-hidden ${
                   netSavings >= 0 ? 'text-white' : 'text-amber-300'
-                }`}
+                } ${getBannerAmountClass(
+                  `${netSavings >= 0 ? '+' : ''}${formatCurrency(netSavings)}`
+                )}`}
+                title={`${netSavings >= 0 ? '+' : ''}${formatCurrency(netSavings)}`}
               >
                 {netSavings >= 0 ? '+' : ''}
                 {formatCurrency(netSavings)}
@@ -502,33 +522,33 @@ export const MonthlyView: React.FC<MonthlyViewProps> = ({
           </div>
 
           {/* Expense Breakdown Pills: Cash vs Bank vs MFS */}
-          <div className="grid grid-cols-3 gap-2 pt-3 border-t border-white/15 text-xs">
-            <div className="bg-white/10 backdrop-blur-xs rounded-xl p-2">
-              <div className="flex items-center gap-1 text-indigo-200 text-[11px]">
-                <Banknote className="w-3.5 h-3.5" />
-                <span>ক্যাশ খরচ</span>
+          <div className="grid grid-cols-3 gap-1.5 sm:gap-2 pt-3 border-t border-white/15 text-xs">
+            <div className="bg-white/10 backdrop-blur-xs rounded-xl p-2 overflow-hidden">
+              <div className="flex items-center gap-1 text-indigo-200 text-[10px] sm:text-[11px] whitespace-nowrap">
+                <Banknote className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                <span className="truncate">ক্যাশ খরচ</span>
               </div>
-              <div className="font-bold mt-0.5 text-white break-words leading-tight">
+              <div className="font-bold mt-1 text-white whitespace-nowrap tracking-tight text-[11px] min-[360px]:text-xs sm:text-sm leading-none">
                 {formatCurrency(typeTotals.cash)}
               </div>
             </div>
 
-            <div className="bg-white/10 backdrop-blur-xs rounded-xl p-2">
-              <div className="flex items-center gap-1 text-indigo-200 text-[11px]">
-                <Landmark className="w-3.5 h-3.5" />
-                <span>ব্যাংক খরচ</span>
+            <div className="bg-white/10 backdrop-blur-xs rounded-xl p-2 overflow-hidden">
+              <div className="flex items-center gap-1 text-indigo-200 text-[10px] sm:text-[11px] whitespace-nowrap">
+                <Landmark className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                <span className="truncate">ব্যাংক খরচ</span>
               </div>
-              <div className="font-bold mt-0.5 text-white break-words leading-tight">
+              <div className="font-bold mt-1 text-white whitespace-nowrap tracking-tight text-[11px] min-[360px]:text-xs sm:text-sm leading-none">
                 {formatCurrency(typeTotals.bank)}
               </div>
             </div>
 
-            <div className="bg-white/10 backdrop-blur-xs rounded-xl p-2">
-              <div className="flex items-center gap-1 text-indigo-200 text-[11px]">
-                <Smartphone className="w-3.5 h-3.5" />
-                <span>মোবাইল খরচ</span>
+            <div className="bg-white/10 backdrop-blur-xs rounded-xl p-2 overflow-hidden">
+              <div className="flex items-center gap-1 text-indigo-200 text-[10px] sm:text-[11px] whitespace-nowrap">
+                <Smartphone className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                <span className="truncate">মোবাইল খরচ</span>
               </div>
-              <div className="font-bold mt-0.5 text-white break-words leading-tight">
+              <div className="font-bold mt-1 text-white whitespace-nowrap tracking-tight text-[11px] min-[360px]:text-xs sm:text-sm leading-none">
                 {formatCurrency(typeTotals.mfs)}
               </div>
             </div>
@@ -563,32 +583,36 @@ export const MonthlyView: React.FC<MonthlyViewProps> = ({
 
         <div className="grid grid-cols-2 gap-2 text-xs">
           {/* All Accounts Balance MoM */}
-          <div className="bg-slate-50 p-2.5 rounded-2xl border border-slate-100 space-y-1">
-            <span className="text-[10px] text-slate-500 block font-medium">
+          <div className="bg-slate-50 p-2.5 rounded-2xl border border-slate-100 space-y-1.5 overflow-hidden">
+            <span className="text-[10px] text-slate-500 block font-medium whitespace-nowrap">
               সব একাউন্ট মিলে মোট ব্যালেন্স:
             </span>
-            <div className="flex items-baseline justify-between text-[11px]">
-              <span className="text-slate-400">গত মাসে:</span>
-              <span className="font-bold text-slate-600">{formatCurrency(prevTotalBalance)}</span>
+            <div className="flex items-baseline justify-between gap-1 text-[11px]">
+              <span className="text-slate-400 shrink-0 whitespace-nowrap">গত মাসে:</span>
+              <span className="font-bold text-slate-600 whitespace-nowrap text-[11px] sm:text-xs">
+                {formatCurrency(prevTotalBalance)}
+              </span>
             </div>
-            <div className="flex items-baseline justify-between text-[11px]">
-              <span className="text-indigo-700 font-semibold">এই মাসে:</span>
-              <span className="font-extrabold text-indigo-950 text-xs">{formatCurrency(currTotalBalance)}</span>
+            <div className="flex items-baseline justify-between gap-1 text-[11px]">
+              <span className="text-indigo-700 font-semibold shrink-0 whitespace-nowrap">এই মাসে:</span>
+              <span className="font-extrabold text-indigo-950 text-[11px] sm:text-xs whitespace-nowrap">
+                {formatCurrency(currTotalBalance)}
+              </span>
             </div>
             <div
-              className={`text-[10px] font-bold pt-1 border-t border-slate-200/60 flex items-center justify-between ${
+              className={`text-[10px] font-bold pt-1.5 border-t border-slate-200/60 flex items-center justify-between gap-1 ${
                 balanceGrowth >= 0 ? 'text-emerald-700' : 'text-rose-700'
               }`}
             >
-              <span className="flex items-center gap-0.5">
+              <span className="flex items-center gap-0.5 shrink-0 whitespace-nowrap">
                 {balanceGrowth >= 0 ? (
-                  <ArrowUpRight className="w-3 h-3" />
+                  <ArrowUpRight className="w-3 h-3 shrink-0" />
                 ) : (
-                  <ArrowDownRight className="w-3 h-3" />
+                  <ArrowDownRight className="w-3 h-3 shrink-0" />
                 )}
                 <span>{balanceGrowth >= 0 ? 'ব্যালেন্স বৃদ্ধি' : 'ব্যালেন্স হ্রাস'}</span>
               </span>
-              <span>
+              <span className="whitespace-nowrap font-bold">
                 {balanceGrowth >= 0 ? '+' : ''}
                 {formatCurrency(balanceGrowth)}
               </span>

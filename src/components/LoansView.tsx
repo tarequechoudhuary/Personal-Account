@@ -80,32 +80,32 @@ export const LoansView: React.FC<LoansViewProps> = ({
         {/* Total Given / Receivable */}
         <div className="bg-white rounded-3xl p-4 border border-slate-100 shadow-xs relative overflow-hidden">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
-              <ArrowUpRight className="w-3 h-3" />
+            <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full inline-flex items-center gap-1 whitespace-nowrap">
+              <ArrowUpRight className="w-3 h-3 shrink-0" />
               <span>লোন দিয়েছি (পাবো)</span>
             </span>
           </div>
-          <div className="text-xl sm:text-2xl font-black text-slate-900">
+          <div className="text-xl sm:text-2xl font-black text-slate-900 whitespace-nowrap tracking-tight">
             {formatCurrency(netReceivable)}
           </div>
-          <div className="text-[10px] text-slate-400 mt-1">
-            মোট দেওয়া: {formatCurrency(totalGiven)} • ফেরত: {formatCurrency(totalGivenPaid)}
+          <div className="text-[10px] text-slate-400 mt-1 whitespace-nowrap">
+            মোট দেওয়া: <span className="font-semibold text-slate-600">{formatCurrency(totalGiven)}</span> • ফেরত: <span className="font-semibold text-emerald-600">{formatCurrency(totalGivenPaid)}</span>
           </div>
         </div>
 
         {/* Total Taken / Payable */}
         <div className="bg-white rounded-3xl p-4 border border-slate-100 shadow-xs relative overflow-hidden">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
-              <ArrowDownLeft className="w-3 h-3" />
+            <span className="text-[11px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full inline-flex items-center gap-1 whitespace-nowrap">
+              <ArrowDownLeft className="w-3 h-3 shrink-0" />
               <span>লোন নিয়েছি (দেনা)</span>
             </span>
           </div>
-          <div className="text-xl sm:text-2xl font-black text-slate-900">
+          <div className="text-xl sm:text-2xl font-black text-slate-900 whitespace-nowrap tracking-tight">
             {formatCurrency(netPayable)}
           </div>
-          <div className="text-[10px] text-slate-400 mt-1">
-            মোট নেওয়া: {formatCurrency(totalTaken)} • পরিশোধ: {formatCurrency(totalTakenPaid)}
+          <div className="text-[10px] text-slate-400 mt-1 whitespace-nowrap">
+            মোট নেওয়া: <span className="font-semibold text-slate-600">{formatCurrency(totalTaken)}</span> • পরিশোধ: <span className="font-semibold text-rose-600">{formatCurrency(totalTakenPaid)}</span>
           </div>
         </div>
       </div>
@@ -274,36 +274,36 @@ export const LoansView: React.FC<LoansViewProps> = ({
                 </div>
 
                 {/* Amount & Status Grid */}
-                <div className="bg-slate-50 rounded-xl p-3 flex items-center justify-between">
+                <div className="bg-slate-50 rounded-xl p-3 flex items-center justify-between gap-2">
                   <div>
-                    <span className="text-[10px] text-slate-400 block font-semibold">
+                    <span className="text-[10px] text-slate-400 block font-semibold whitespace-nowrap">
                       মোট লোনের পরিমাণ
                     </span>
-                    <span className="text-base font-extrabold text-slate-800">
+                    <span className="text-sm sm:text-base font-extrabold text-slate-800 whitespace-nowrap tracking-tight">
                       {formatCurrency(loan.amount)}
                     </span>
                   </div>
 
                   <div className="text-center">
-                    <span className="text-[10px] text-slate-400 block font-semibold">
+                    <span className="text-[10px] text-slate-400 block font-semibold whitespace-nowrap">
                       {isGiven ? 'ফেরত প্রাপ্ত' : 'পরিশোধিত'}
                     </span>
-                    <span className="text-sm font-bold text-emerald-600">
+                    <span className="text-xs sm:text-sm font-bold text-emerald-600 whitespace-nowrap tracking-tight">
                       {formatCurrency(totalPaid)}
                     </span>
                   </div>
 
                   <div className="text-right">
-                    <span className="text-[10px] text-slate-400 block font-semibold">
+                    <span className="text-[10px] text-slate-400 block font-semibold whitespace-nowrap">
                       {isPaid ? 'স্ট্যাটাস' : 'বকেয়া বাকি'}
                     </span>
                     {isPaid ? (
-                      <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                      <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full whitespace-nowrap">
                         <Check className="w-3 h-3" />
                         <span>পরিশোধিত</span>
                       </span>
                     ) : (
-                      <span className="text-base font-extrabold text-rose-600">
+                      <span className="text-sm sm:text-base font-extrabold text-rose-600 whitespace-nowrap tracking-tight">
                         {formatCurrency(remaining)}
                       </span>
                     )}

@@ -219,6 +219,13 @@ export const DailyView: React.FC<DailyViewProps> = ({
 
   const totalTxCount = dateExpenses.length + dateIncomes.length + dateTransfers.length;
 
+  // Helper to scale font size down slightly for longer numbers so amounts NEVER wrap or break across lines
+  const getDailyBannerAmountClass = (valStr: string) => {
+    if (valStr.length > 14) return 'text-[10px] min-[360px]:text-[11px] sm:text-xs';
+    if (valStr.length > 11) return 'text-[11px] min-[360px]:text-xs sm:text-sm';
+    return 'text-xs min-[360px]:text-sm sm:text-base';
+  };
+
   return (
     <div className="space-y-4 pb-20">
       {/* Date Navigation Bar */}
@@ -268,12 +275,12 @@ export const DailyView: React.FC<DailyViewProps> = ({
       </div>
 
       {/* Daily Summary Card with Income & Expense Overview */}
-      <div className="bg-linear-to-br from-emerald-600 to-teal-700 rounded-3xl p-5 text-white shadow-lg shadow-emerald-700/20 relative overflow-hidden">
+      <div className="bg-linear-to-br from-emerald-600 to-teal-700 rounded-3xl p-4 sm:p-5 text-white shadow-lg shadow-emerald-700/20 relative overflow-hidden">
         {/* Subtle decorative background circles */}
         <div className="absolute -right-6 -bottom-6 w-32 h-32 rounded-full bg-white/10 pointer-events-none" />
         <div className="absolute -left-4 -top-4 w-24 h-24 rounded-full bg-white/5 pointer-events-none" />
 
-        <div className="relative z-10 space-y-4">
+        <div className="relative z-10 space-y-3.5">
           {/* Main header row */}
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-emerald-100 flex items-center gap-1.5">
@@ -286,39 +293,52 @@ export const DailyView: React.FC<DailyViewProps> = ({
           </div>
 
           {/* Income vs Expense vs Balance display */}
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
             {/* Income */}
-            <div className="bg-white/10 backdrop-blur-xs rounded-2xl p-2.5">
-              <div className="flex items-center gap-1 text-emerald-100 text-[11px] font-medium">
-                <ArrowDownLeft className="w-3.5 h-3.5 stroke-[2.5]" />
-                <span>মোট জমা/আয়</span>
+            <div className="bg-white/10 backdrop-blur-xs rounded-2xl p-2 sm:p-2.5 overflow-hidden">
+              <div className="flex items-center gap-1 text-emerald-100 text-[10px] sm:text-[11px] font-semibold whitespace-nowrap">
+                <ArrowDownLeft className="w-3 h-3 sm:w-3.5 sm:h-3.5 stroke-[2.5] shrink-0" />
+                <span className="truncate">মোট জমা/আয়</span>
               </div>
-              <div className="font-extrabold text-sm sm:text-base mt-0.5 text-white break-words leading-tight">
+              <div
+                className={`font-black mt-1 text-white whitespace-nowrap tracking-tight leading-none overflow-hidden ${getDailyBannerAmountClass(
+                  `+${formatCurrency(totalDayIncome)}`
+                )}`}
+                title={`+${formatCurrency(totalDayIncome)}`}
+              >
                 +{formatCurrency(totalDayIncome)}
               </div>
             </div>
 
             {/* Expense */}
-            <div className="bg-white/10 backdrop-blur-xs rounded-2xl p-2.5">
-              <div className="flex items-center gap-1 text-emerald-100 text-[11px] font-medium">
-                <TrendingUp className="w-3.5 h-3.5" />
-                <span>মোট খরচ</span>
+            <div className="bg-white/10 backdrop-blur-xs rounded-2xl p-2 sm:p-2.5 overflow-hidden">
+              <div className="flex items-center gap-1 text-emerald-100 text-[10px] sm:text-[11px] font-semibold whitespace-nowrap">
+                <TrendingUp className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                <span className="truncate">মোট খরচ</span>
               </div>
-              <div className="font-extrabold text-sm sm:text-base mt-0.5 text-rose-100 break-words leading-tight">
+              <div
+                className={`font-black mt-1 text-rose-100 whitespace-nowrap tracking-tight leading-none overflow-hidden ${getDailyBannerAmountClass(
+                  `-${formatCurrency(totalDayExpense)}`
+                )}`}
+                title={`-${formatCurrency(totalDayExpense)}`}
+              >
                 -{formatCurrency(totalDayExpense)}
               </div>
             </div>
 
             {/* Balance */}
-            <div className="bg-white/15 backdrop-blur-xs rounded-2xl p-2.5 ring-1 ring-white/20">
-              <div className="flex items-center gap-1 text-emerald-100 text-[11px] font-medium">
-                <Wallet className="w-3.5 h-3.5" />
-                <span>দিনের স্থিতি</span>
+            <div className="bg-white/15 backdrop-blur-xs rounded-2xl p-2 sm:p-2.5 ring-1 ring-white/20 overflow-hidden">
+              <div className="flex items-center gap-1 text-emerald-100 text-[10px] sm:text-[11px] font-semibold whitespace-nowrap">
+                <Wallet className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                <span className="truncate">দিনের স্থিতি</span>
               </div>
               <div
-                className={`font-extrabold text-sm sm:text-base mt-0.5 break-words leading-tight ${
+                className={`font-black mt-1 whitespace-nowrap tracking-tight leading-none overflow-hidden ${
                   dayBalance >= 0 ? 'text-white' : 'text-amber-200'
-                }`}
+                } ${getDailyBannerAmountClass(
+                  `${dayBalance >= 0 ? '+' : ''}${formatCurrency(dayBalance)}`
+                )}`}
+                title={`${dayBalance >= 0 ? '+' : ''}${formatCurrency(dayBalance)}`}
               >
                 {dayBalance >= 0 ? '+' : ''}
                 {formatCurrency(dayBalance)}

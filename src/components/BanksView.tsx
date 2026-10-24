@@ -533,20 +533,20 @@ export const BanksView: React.FC<BanksViewProps> = ({
         </div>
 
         <div className="grid grid-cols-2 gap-2 text-xs">
-          <div className="bg-white/10 rounded-2xl p-2.5 border border-white/10">
-            <span className="text-[10px] text-slate-300 block font-medium">
+          <div className="bg-white/10 rounded-2xl p-2.5 border border-white/10 overflow-hidden">
+            <span className="text-[10px] text-slate-300 block font-medium whitespace-nowrap">
               {prevMonthLabel}-এর শেষ ব্যালেন্স:
             </span>
-            <span className="font-extrabold text-white text-sm sm:text-base mt-0.5 block break-words">
+            <span className="font-black text-white text-xs min-[360px]:text-sm sm:text-base mt-0.5 block whitespace-nowrap tracking-tight">
               {formatCurrency(lastMonthTotalAllBalances)}
             </span>
           </div>
 
-          <div className="bg-white/15 rounded-2xl p-2.5 border border-emerald-500/30">
-            <span className="text-[10px] text-emerald-200 block font-medium">
+          <div className="bg-white/15 rounded-2xl p-2.5 border border-emerald-500/30 overflow-hidden">
+            <span className="text-[10px] text-emerald-200 block font-medium whitespace-nowrap">
               {currMonthLabel}-এর বর্তমান ব্যালেন্স:
             </span>
-            <span className="font-extrabold text-emerald-300 text-sm sm:text-base mt-0.5 block break-words">
+            <span className="font-black text-emerald-300 text-xs min-[360px]:text-sm sm:text-base mt-0.5 block whitespace-nowrap tracking-tight">
               {formatCurrency(thisMonthTotalAllBalances)}
             </span>
           </div>
@@ -725,11 +725,11 @@ export const BanksView: React.FC<BanksViewProps> = ({
                       <Wallet className="w-4 h-4" />
                     </div>
                     <div>
-                      <span className="text-[10px] font-bold text-slate-500 block uppercase tracking-wider">
+                      <span className="text-[10px] font-bold text-slate-500 block uppercase tracking-wider whitespace-nowrap">
                         বর্তমান ব্যালেন্স
                       </span>
                       <span
-                        className={`text-base sm:text-lg font-black tracking-tight leading-tight block break-words ${
+                        className={`text-sm min-[360px]:text-base sm:text-lg font-black tracking-tight leading-tight block whitespace-nowrap ${
                           balance >= 0 ? 'text-emerald-700' : 'text-rose-600'
                         }`}
                       >
@@ -739,29 +739,29 @@ export const BanksView: React.FC<BanksViewProps> = ({
                     </div>
                   </div>
 
-                  <span className="text-[10px] font-bold text-slate-600 bg-white/90 px-2.5 py-1 rounded-full border border-slate-200/80 shadow-2xs shrink-0">
+                  <span className="text-[10px] font-bold text-slate-600 bg-white/90 px-2.5 py-1 rounded-full border border-slate-200/80 shadow-2xs shrink-0 whitespace-nowrap">
                     {toBengaliNumber(total)} টি লেনদেন
                   </span>
                 </div>
 
                 {/* Inflow & Outflow in 2-Columns with abundant room for full digits */}
                 <div className="grid grid-cols-2 gap-2 text-left">
-                  <div className="bg-slate-50/80 p-2.5 rounded-xl border border-slate-100">
-                    <span className="text-[10px] text-slate-500 font-semibold flex items-center gap-1">
+                  <div className="bg-slate-50/80 p-2.5 rounded-xl border border-slate-100 overflow-hidden">
+                    <span className="text-[10px] text-slate-500 font-semibold flex items-center gap-1 whitespace-nowrap">
                       <ArrowDownLeft className="w-3 h-3 text-emerald-600 shrink-0" />
                       মোট জমা
                     </span>
-                    <span className="text-xs sm:text-sm font-extrabold text-emerald-600 mt-0.5 block leading-tight break-words">
+                    <span className="text-xs sm:text-sm font-black text-emerald-600 mt-0.5 block leading-tight whitespace-nowrap tracking-tight">
                       +{formatCurrency(totalIncome)}
                     </span>
                   </div>
 
-                  <div className="bg-slate-50/80 p-2.5 rounded-xl border border-slate-100">
-                    <span className="text-[10px] text-slate-500 font-semibold flex items-center gap-1">
+                  <div className="bg-slate-50/80 p-2.5 rounded-xl border border-slate-100 overflow-hidden">
+                    <span className="text-[10px] text-slate-500 font-semibold flex items-center gap-1 whitespace-nowrap">
                       <TrendingDown className="w-3 h-3 text-rose-500 shrink-0" />
                       মোট খরচ
                     </span>
-                    <span className="text-xs sm:text-sm font-extrabold text-rose-600 mt-0.5 block leading-tight break-words">
+                    <span className="text-xs sm:text-sm font-black text-rose-600 mt-0.5 block leading-tight whitespace-nowrap tracking-tight">
                       -{formatCurrency(totalSpent)}
                     </span>
                   </div>
@@ -777,22 +777,22 @@ export const BanksView: React.FC<BanksViewProps> = ({
                   </span>
                   <span className="font-bold flex items-center gap-1.5 flex-wrap">
                     {loanGivenOut > 0 && (
-                      <span className="text-rose-700" title="কাউকে লোন দেওয়া">
+                      <span className="text-rose-700 whitespace-nowrap" title="কাউকে লোন দেওয়া">
                         দেওয়া -{formatCurrency(loanGivenOut)}
                       </span>
                     )}
                     {loanGivenRepaidIn > 0 && (
-                      <span className="text-emerald-700" title="দেওয়া লোন ফেরত আদায়">
+                      <span className="text-emerald-700 whitespace-nowrap" title="দেওয়া লোন ফেরত আদায়">
                         আদায় +{formatCurrency(loanGivenRepaidIn)}
                       </span>
                     )}
                     {loanTakenIn > 0 && (
-                      <span className="text-emerald-700" title="কারো থেকে ঋণ গ্রহণ">
+                      <span className="text-emerald-700 whitespace-nowrap" title="কারো থেকে ঋণ গ্রহণ">
                         ঋণ +{formatCurrency(loanTakenIn)}
                       </span>
                     )}
                     {loanTakenRepaidOut > 0 && (
-                      <span className="text-rose-700" title="ঋণ শোধ">
+                      <span className="text-rose-700 whitespace-nowrap" title="ঋণ শোধ">
                         শোধ -{formatCurrency(loanTakenRepaidOut)}
                       </span>
                     )}
@@ -803,16 +803,16 @@ export const BanksView: React.FC<BanksViewProps> = ({
               {/* Non-expense Transfer summary for this account if any */}
               {(transIn > 0 || transOut > 0) && (
                 <div className="mt-2 bg-indigo-50/80 p-1.5 px-2.5 rounded-xl text-[10px] text-indigo-900 flex items-center justify-between border border-indigo-100">
-                  <span className="flex items-center gap-1 font-medium">
-                    <ArrowLeftRight className="w-3 h-3 text-indigo-600" />
+                  <span className="flex items-center gap-1 font-medium whitespace-nowrap">
+                    <ArrowLeftRight className="w-3 h-3 text-indigo-600 shrink-0" />
                     <span>স্থানান্তর সমন্বয় (খরচ নয়):</span>
                   </span>
                   <span className="font-bold flex items-center gap-1.5">
                     {transIn > 0 && (
-                      <span className="text-emerald-700">+{formatCurrency(transIn)}</span>
+                      <span className="text-emerald-700 whitespace-nowrap">+{formatCurrency(transIn)}</span>
                     )}
                     {transOut > 0 && (
-                      <span className="text-indigo-700">-{formatCurrency(transOut)}</span>
+                      <span className="text-indigo-700 whitespace-nowrap">-{formatCurrency(transOut)}</span>
                     )}
                   </span>
                 </div>
@@ -825,16 +825,16 @@ export const BanksView: React.FC<BanksViewProps> = ({
                 const isInc = diffBal >= 0;
                 return (
                   <div className="mt-2 bg-slate-50/90 p-2 rounded-xl text-[11px] flex items-center justify-between border border-slate-100">
-                    <span className="text-slate-500">
-                      গত মাসে ছিল: <strong>{formatCurrency(prevBal)}</strong>
+                    <span className="text-slate-500 whitespace-nowrap">
+                      গত মাসে ছিল: <strong className="whitespace-nowrap">{formatCurrency(prevBal)}</strong>
                     </span>
                     <span
-                      className={`font-extrabold flex items-center gap-0.5 ${
+                      className={`font-extrabold flex items-center gap-0.5 whitespace-nowrap ${
                         isInc ? 'text-emerald-700' : 'text-rose-600'
                       }`}
                     >
                       {isInc ? (
-                        <ArrowUpRight className="w-3 h-3 stroke-[2.5]" />
+                        <ArrowUpRight className="w-3 h-3 stroke-[2.5] shrink-0" />
                       ) : (
                         <ArrowDownRight className="w-3 h-3 stroke-[2.5]" />
                       )}
