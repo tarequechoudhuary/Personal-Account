@@ -470,7 +470,7 @@ export const MonthlyView: React.FC<MonthlyViewProps> = ({
                 <ArrowDownLeft className="w-3.5 h-3.5 stroke-[2.5]" />
                 <span>মোট আয়/জমা</span>
               </div>
-              <div className="font-extrabold text-base sm:text-lg mt-0.5 text-white truncate">
+              <div className="font-extrabold text-sm sm:text-base mt-0.5 text-white break-words leading-tight">
                 +{formatCurrency(totalMonthIncome)}
               </div>
             </div>
@@ -480,7 +480,7 @@ export const MonthlyView: React.FC<MonthlyViewProps> = ({
                 <TrendingDown className="w-3.5 h-3.5" />
                 <span>মোট খরচ</span>
               </div>
-              <div className="font-extrabold text-base sm:text-lg mt-0.5 text-rose-100 truncate">
+              <div className="font-extrabold text-sm sm:text-base mt-0.5 text-rose-100 break-words leading-tight">
                 -{formatCurrency(totalMonthExpense)}
               </div>
             </div>
@@ -491,7 +491,7 @@ export const MonthlyView: React.FC<MonthlyViewProps> = ({
                 <span>মাসিক স্থিতি</span>
               </div>
               <div
-                className={`font-extrabold text-base sm:text-lg mt-0.5 truncate ${
+                className={`font-extrabold text-sm sm:text-base mt-0.5 break-words leading-tight ${
                   netSavings >= 0 ? 'text-white' : 'text-amber-300'
                 }`}
               >
@@ -508,7 +508,7 @@ export const MonthlyView: React.FC<MonthlyViewProps> = ({
                 <Banknote className="w-3.5 h-3.5" />
                 <span>ক্যাশ খরচ</span>
               </div>
-              <div className="font-bold mt-0.5 text-white truncate">
+              <div className="font-bold mt-0.5 text-white break-words leading-tight">
                 {formatCurrency(typeTotals.cash)}
               </div>
             </div>
@@ -518,7 +518,7 @@ export const MonthlyView: React.FC<MonthlyViewProps> = ({
                 <Landmark className="w-3.5 h-3.5" />
                 <span>ব্যাংক খরচ</span>
               </div>
-              <div className="font-bold mt-0.5 text-white truncate">
+              <div className="font-bold mt-0.5 text-white break-words leading-tight">
                 {formatCurrency(typeTotals.bank)}
               </div>
             </div>
@@ -528,7 +528,7 @@ export const MonthlyView: React.FC<MonthlyViewProps> = ({
                 <Smartphone className="w-3.5 h-3.5" />
                 <span>মোবাইল খরচ</span>
               </div>
-              <div className="font-bold mt-0.5 text-white truncate">
+              <div className="font-bold mt-0.5 text-white break-words leading-tight">
                 {formatCurrency(typeTotals.mfs)}
               </div>
             </div>
@@ -937,7 +937,7 @@ export const MonthlyView: React.FC<MonthlyViewProps> = ({
                       <span className="text-[10px] text-emerald-700 font-semibold block">
                         এই মাসে জমা
                       </span>
-                      <span className="font-bold text-emerald-700 mt-0.5 block truncate">
+                      <span className="font-bold text-emerald-700 mt-0.5 block break-words leading-tight">
                         +{formatCurrency(received)}
                       </span>
                     </div>
@@ -945,7 +945,7 @@ export const MonthlyView: React.FC<MonthlyViewProps> = ({
                       <span className="text-[10px] text-rose-700 font-semibold block">
                         এই মাসে খরচ
                       </span>
-                      <span className="font-bold text-rose-700 mt-0.5 block truncate">
+                      <span className="font-bold text-rose-700 mt-0.5 block break-words leading-tight">
                         -{formatCurrency(spent)}
                       </span>
                     </div>

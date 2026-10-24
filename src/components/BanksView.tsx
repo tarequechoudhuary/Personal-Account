@@ -537,7 +537,7 @@ export const BanksView: React.FC<BanksViewProps> = ({
             <span className="text-[10px] text-slate-300 block font-medium">
               {prevMonthLabel}-এর শেষ ব্যালেন্স:
             </span>
-            <span className="font-extrabold text-white text-sm sm:text-base mt-0.5 block truncate">
+            <span className="font-extrabold text-white text-sm sm:text-base mt-0.5 block break-words">
               {formatCurrency(lastMonthTotalAllBalances)}
             </span>
           </div>
@@ -546,7 +546,7 @@ export const BanksView: React.FC<BanksViewProps> = ({
             <span className="text-[10px] text-emerald-200 block font-medium">
               {currMonthLabel}-এর বর্তমান ব্যালেন্স:
             </span>
-            <span className="font-extrabold text-emerald-300 text-sm sm:text-base mt-0.5 block truncate">
+            <span className="font-extrabold text-emerald-300 text-sm sm:text-base mt-0.5 block break-words">
               {formatCurrency(thisMonthTotalAllBalances)}
             </span>
           </div>
@@ -642,12 +642,12 @@ export const BanksView: React.FC<BanksViewProps> = ({
                     <h4 className="font-bold text-slate-800 text-sm">
                       {source.name}
                     </h4>
-                    <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-0.5">
+                    <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-0.5 flex-wrap">
                       <span className="font-medium">{getTypeLabel(source.type)}</span>
                       {source.accountNumber && (
                         <>
                           <span>•</span>
-                          <span className="text-[11px] truncate max-w-[120px]">
+                          <span className="text-[11px] font-mono text-slate-500 font-medium">
                             {source.accountNumber}
                           </span>
                         </>
@@ -704,41 +704,67 @@ export const BanksView: React.FC<BanksViewProps> = ({
                 </div>
               </div>
 
-              {/* Financial Breakdown: Inflow, Outflow, Balance */}
-              <div className="mt-3 pt-3 border-t border-slate-100 grid grid-cols-3 gap-1.5 text-center">
-                <div className="bg-slate-50/70 p-2 rounded-xl">
-                  <span className="text-[10px] text-slate-500 block font-semibold flex items-center justify-center gap-0.5">
-                    <ArrowDownLeft className="w-3 h-3 text-emerald-600" />
-                    মোট জমা
-                  </span>
-                  <span className="text-xs font-bold text-emerald-600 mt-0.5 block truncate">
-                    +{formatCurrency(totalIncome)}
+              {/* Financial Breakdown: Hero Balance Banner & 2-Column Inflow/Outflow */}
+              <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
+                {/* Prominent Balance Display (Never Truncated) */}
+                <div
+                  className={`p-3 rounded-2xl flex items-center justify-between border ${
+                    balance >= 0
+                      ? 'bg-emerald-50/70 border-emerald-100/90 text-emerald-950'
+                      : 'bg-rose-50/70 border-rose-100/90 text-rose-950'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                        balance >= 0
+                          ? 'bg-emerald-600 text-white shadow-xs shadow-emerald-600/30'
+                          : 'bg-rose-600 text-white shadow-xs shadow-rose-600/30'
+                      }`}
+                    >
+                      <Wallet className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-500 block uppercase tracking-wider">
+                        বর্তমান ব্যালেন্স
+                      </span>
+                      <span
+                        className={`text-base sm:text-lg font-black tracking-tight leading-tight block break-words ${
+                          balance >= 0 ? 'text-emerald-700' : 'text-rose-600'
+                        }`}
+                      >
+                        {balance >= 0 ? '' : '-'}
+                        {formatCurrency(Math.abs(balance))}
+                      </span>
+                    </div>
+                  </div>
+
+                  <span className="text-[10px] font-bold text-slate-600 bg-white/90 px-2.5 py-1 rounded-full border border-slate-200/80 shadow-2xs shrink-0">
+                    {toBengaliNumber(total)} টি লেনদেন
                   </span>
                 </div>
 
-                <div className="bg-slate-50/70 p-2 rounded-xl">
-                  <span className="text-[10px] text-slate-500 block font-semibold flex items-center justify-center gap-0.5">
-                    <TrendingDown className="w-3 h-3 text-rose-500" />
-                    মোট খরচ
-                  </span>
-                  <span className="text-xs font-bold text-rose-600 mt-0.5 block truncate">
-                    -{formatCurrency(totalSpent)}
-                  </span>
-                </div>
+                {/* Inflow & Outflow in 2-Columns with abundant room for full digits */}
+                <div className="grid grid-cols-2 gap-2 text-left">
+                  <div className="bg-slate-50/80 p-2.5 rounded-xl border border-slate-100">
+                    <span className="text-[10px] text-slate-500 font-semibold flex items-center gap-1">
+                      <ArrowDownLeft className="w-3 h-3 text-emerald-600 shrink-0" />
+                      মোট জমা
+                    </span>
+                    <span className="text-xs sm:text-sm font-extrabold text-emerald-600 mt-0.5 block leading-tight break-words">
+                      +{formatCurrency(totalIncome)}
+                    </span>
+                  </div>
 
-                <div className="bg-emerald-50/70 p-2 rounded-xl border border-emerald-100/80">
-                  <span className="text-[10px] text-emerald-800 block font-semibold flex items-center justify-center gap-0.5">
-                    <Wallet className="w-3 h-3 text-emerald-700" />
-                    ব্যালেন্স
-                  </span>
-                  <span
-                    className={`text-xs font-extrabold mt-0.5 block truncate ${
-                      balance >= 0 ? 'text-emerald-700' : 'text-rose-600'
-                    }`}
-                  >
-                    {balance >= 0 ? '' : '-'}
-                    {formatCurrency(Math.abs(balance))}
-                  </span>
+                  <div className="bg-slate-50/80 p-2.5 rounded-xl border border-slate-100">
+                    <span className="text-[10px] text-slate-500 font-semibold flex items-center gap-1">
+                      <TrendingDown className="w-3 h-3 text-rose-500 shrink-0" />
+                      মোট খরচ
+                    </span>
+                    <span className="text-xs sm:text-sm font-extrabold text-rose-600 mt-0.5 block leading-tight break-words">
+                      -{formatCurrency(totalSpent)}
+                    </span>
+                  </div>
                 </div>
               </div>
 

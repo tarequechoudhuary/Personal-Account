@@ -293,7 +293,7 @@ export const DailyView: React.FC<DailyViewProps> = ({
                 <ArrowDownLeft className="w-3.5 h-3.5 stroke-[2.5]" />
                 <span>মোট জমা/আয়</span>
               </div>
-              <div className="font-extrabold text-base sm:text-lg mt-0.5 text-white truncate">
+              <div className="font-extrabold text-sm sm:text-base mt-0.5 text-white break-words leading-tight">
                 +{formatCurrency(totalDayIncome)}
               </div>
             </div>
@@ -304,7 +304,7 @@ export const DailyView: React.FC<DailyViewProps> = ({
                 <TrendingUp className="w-3.5 h-3.5" />
                 <span>মোট খরচ</span>
               </div>
-              <div className="font-extrabold text-base sm:text-lg mt-0.5 text-rose-100 truncate">
+              <div className="font-extrabold text-sm sm:text-base mt-0.5 text-rose-100 break-words leading-tight">
                 -{formatCurrency(totalDayExpense)}
               </div>
             </div>
@@ -316,7 +316,7 @@ export const DailyView: React.FC<DailyViewProps> = ({
                 <span>দিনের স্থিতি</span>
               </div>
               <div
-                className={`font-extrabold text-base sm:text-lg mt-0.5 truncate ${
+                className={`font-extrabold text-sm sm:text-base mt-0.5 break-words leading-tight ${
                   dayBalance >= 0 ? 'text-white' : 'text-amber-200'
                 }`}
               >
