@@ -92,9 +92,9 @@ export const IncomeItem: React.FC<IncomeItemProps> = ({
         </div>
 
         {/* Right: Amount & Actions */}
-        <div className="flex flex-col items-end gap-1 shrink-0">
+        <div className="flex flex-col items-end gap-1 shrink-0 pl-2">
           <div className="flex items-center gap-0.5">
-            <span className="text-lg sm:text-xl font-extrabold text-emerald-600 tracking-tight">
+            <span className="text-lg sm:text-xl font-extrabold text-emerald-600 tracking-tight whitespace-nowrap tabular-nums">
               +{formatCurrency(income.amount)}
             </span>
           </div>

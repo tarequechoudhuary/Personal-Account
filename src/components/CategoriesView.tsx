@@ -146,89 +146,120 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
             >
               {/* Main Category Header Bar */}
               <div
-                className={`p-4 flex items-center justify-between gap-3 border-b transition-colors cursor-pointer ${
+                className={`p-3.5 sm:p-4 border-b transition-colors cursor-pointer ${
                   isMainSelected
-                    ? 'bg-emerald-50/40 border-emerald-200'
+                    ? 'bg-emerald-50/50 border-emerald-200'
                     : 'bg-slate-50/60 hover:bg-slate-50 border-slate-100'
                 }`}
                 onClick={() => toggleCollapse(main.id)}
               >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div
-                    className="w-11 h-11 rounded-2xl text-white flex items-center justify-center shrink-0 shadow-xs"
-                    style={{ backgroundColor: main.color }}
-                  >
-                    <CategoryIcon name={main.icon} className="w-5 h-5" />
+                {/* Upper Tier: Category Identity (Left) & Actions (Right) */}
+                <div className="flex items-center justify-between gap-2.5">
+                  <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                    <div
+                      className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl text-white flex items-center justify-center shrink-0 shadow-xs"
+                      style={{ backgroundColor: main.color }}
+                    >
+                      <CategoryIcon name={main.icon} className="w-5 h-5" />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 sm:gap-2">
+                        <h4 className="font-bold text-slate-900 text-sm sm:text-base truncate">
+                          {main.name}
+                        </h4>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 whitespace-nowrap shrink-0">
+                          প্রধান খাত
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-0.5 text-xs text-slate-500 whitespace-nowrap">
+                        <span>{toBengaliNumber(subCats.length)} টি উপ-খাত</span>
+                        <span>•</span>
+                        <span>{toBengaliNumber(mainExpenses.length)} টি খরচ</span>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-bold text-slate-900 text-sm sm:text-base truncate">
-                        {main.name}
-                      </h4>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800">
-                        প্রধান খাত
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-500">
-                      <span>{toBengaliNumber(subCats.length)} টি উপ-খাত</span>
-                      <span>•</span>
-                      <span>{toBengaliNumber(mainExpenses.length)} টি খরচ</span>
-                    </div>
+                  {/* Actions Right: Add Sub-cat, Edit, Delete, Chevron */}
+                  <div
+                    className="flex items-center gap-1 sm:gap-1.5 shrink-0"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {/* Add Sub-category inside this Main Category */}
+                    <button
+                      id={`btn-add-sub-for-${main.id}`}
+                      onClick={() => onAddCategory(main.id)}
+                      className="p-1.5 sm:px-2.5 sm:py-1.5 text-emerald-700 bg-emerald-100/70 hover:bg-emerald-100 active:bg-emerald-200 rounded-lg text-xs font-semibold flex items-center gap-1 border border-emerald-200/80 transition-colors"
+                      title="এই খাতের অধীনে নতুন উপ-খাত যোগ করুন"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">উপ-খাত</span>
+                    </button>
+
+                    {/* Edit Main Category */}
+                    <button
+                      id={`btn-edit-main-${main.id}`}
+                      onClick={() => onEditCategory(main)}
+                      className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-white active:bg-slate-100 rounded-lg transition-colors border border-transparent hover:border-slate-200"
+                      title="প্রধান খাত সম্পাদনা"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+
+                    {/* Delete Main Category */}
+                    <button
+                      id={`btn-delete-main-${main.id}`}
+                      onClick={() => onDeleteCategory(main.id)}
+                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 active:bg-rose-100 rounded-lg transition-colors border border-transparent hover:border-rose-100"
+                      title="মুছে ফেলুন"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+
+                    {/* Toggle Arrow */}
+                    <button
+                      type="button"
+                      onClick={() => toggleCollapse(main.id)}
+                      className="p-1 sm:p-1.5 text-slate-400 hover:text-slate-700 rounded-lg transition-colors"
+                      title={isCollapsed ? 'উপ-খাতগুলো দেখুন' : 'উপ-খাতগুলো বন্ধ করুন'}
+                    >
+                      {isCollapsed ? (
+                        <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5" />
+                      )}
+                    </button>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
-                  <div className="text-right mr-1">
-                    <span className="text-xs text-slate-400 block">মোট খরচ</span>
-                    <span className="text-sm sm:text-base font-bold text-slate-900">
+                {/* Lower Tier: Dedicated Total Spent & View Transactions */}
+                <div className="mt-2.5 pt-2 border-t border-slate-200/70 flex items-center justify-between text-xs sm:text-sm">
+                  <div className="flex items-center gap-1.5 text-slate-500 font-medium">
+                    <span className="text-slate-500 text-xs font-medium">প্রধান খাতের মোট খরচ:</span>
+                    <span className="text-sm sm:text-base font-bold text-slate-900 tabular-nums whitespace-nowrap">
                       {formatCurrency(totalSpent)}
                     </span>
                   </div>
 
-                  {/* Add Sub-category inside this Main Category */}
-                  <button
-                    id={`btn-add-sub-for-${main.id}`}
-                    onClick={() => onAddCategory(main.id)}
-                    className="p-1.5 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg text-xs font-semibold flex items-center gap-1 border border-emerald-200"
-                    title="এই খাতের আন্ডারে নতুন উপ-খাত যোগ করুন"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">উপ-খাত</span>
-                  </button>
-
-                  {/* Edit Main Category */}
-                  <button
-                    id={`btn-edit-main-${main.id}`}
-                    onClick={() => onEditCategory(main)}
-                    className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-white rounded-lg transition-colors"
-                    title="প্রধান খাত পরিবর্তন"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-
-                  {/* Delete Main Category */}
-                  <button
-                    id={`btn-delete-main-${main.id}`}
-                    onClick={() => onDeleteCategory(main.id)}
-                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-white rounded-lg transition-colors"
-                    title="মুছে ফেলুন"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-
-                  {/* Toggle Arrow */}
-                  <button
-                    type="button"
-                    onClick={() => toggleCollapse(main.id)}
-                    className="p-1 text-slate-400 hover:text-slate-600"
-                  >
-                    {isCollapsed ? (
-                      <ChevronRight className="w-5 h-5" />
-                    ) : (
-                      <ChevronDown className="w-5 h-5" />
+                  <div className="flex items-center gap-1.5">
+                    {mainExpenses.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedCategoryId(isMainSelected ? null : main.id);
+                        }}
+                        className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg transition-all whitespace-nowrap ${
+                          isMainSelected
+                            ? 'bg-emerald-600 text-white shadow-xs'
+                            : 'bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-200/90'
+                        }`}
+                        title="এই প্রধান খাতের সব লেনদেন দেখুন"
+                      >
+                        {isMainSelected ? 'তালিকা লুকান' : 'লেনদেন দেখুন'}
+                      </button>
                     )}
-                  </button>
+                  </div>
                 </div>
               </div>
 
@@ -266,17 +297,17 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                                 <h5 className="font-semibold text-slate-800 text-xs sm:text-sm truncate">
                                   {sub.name}
                                 </h5>
-                                <span className="text-[11px] text-slate-400">
+                                <span className="text-[11px] text-slate-400 whitespace-nowrap">
                                   {toBengaliNumber(subCount)} টি খরচ
                                 </span>
                               </div>
                             </div>
 
                             <div
-                              className="flex items-center gap-2 shrink-0"
+                              className="flex items-center gap-2 shrink-0 ml-2"
                               onClick={(e) => e.stopPropagation()}
                             >
-                              <span className="text-xs font-bold text-slate-800">
+                              <span className="text-xs sm:text-sm font-bold text-slate-800 tabular-nums whitespace-nowrap">
                                 {formatCurrency(subTotal)}
                               </span>
                               <button
@@ -330,16 +361,16 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                   key={cat.id}
                   className="flex items-center justify-between p-2.5 rounded-xl border border-slate-100"
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
                     <div
                       className="w-7 h-7 rounded-lg text-white flex items-center justify-center shrink-0"
                       style={{ backgroundColor: cat.color }}
                     >
                       <CategoryIcon name={cat.icon} className="w-3.5 h-3.5" />
                     </div>
-                    <span className="text-xs font-semibold text-slate-800">{cat.name}</span>
+                    <span className="text-xs font-semibold text-slate-800 truncate">{cat.name}</span>
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 shrink-0">
                     <button
                       onClick={() => onEditCategory(cat)}
                       className="p-1 text-slate-400 hover:text-emerald-600"
@@ -362,22 +393,22 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
 
       {/* Selected Category Expenses List */}
       {selectedCategoryId && selectedCategory && (
-        <div className="bg-white rounded-3xl p-5 border border-emerald-200 shadow-sm mt-4 animate-in fade-in duration-200">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
-            <div className="flex items-center gap-2.5">
+        <div className="bg-white rounded-3xl p-4 sm:p-5 border border-emerald-200 shadow-sm mt-4 animate-in fade-in duration-200">
+          <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-100 mb-3">
+            <div className="flex items-center gap-2.5 min-w-0 flex-1">
               <div
                 className="w-9 h-9 rounded-xl text-white flex items-center justify-center shrink-0"
                 style={{ backgroundColor: selectedCategory.color }}
               >
                 <CategoryIcon name={selectedCategory.icon} className="w-4 h-4" />
               </div>
-              <div>
-                <h4 className="font-bold text-slate-800 text-sm">
+              <div className="min-w-0 flex-1">
+                <h4 className="font-bold text-slate-800 text-sm truncate">
                   {selectedCategory.name} - এর খরচের তালিকা
                 </h4>
-                <span className="text-xs text-slate-500">
+                <span className="text-xs text-slate-500 whitespace-nowrap block truncate">
                   {toBengaliNumber(selectedCategoryExpenses.length)} টি খরচ • মোট{' '}
-                  <strong className="text-slate-800">
+                  <strong className="text-slate-800 whitespace-nowrap">
                     {formatCurrency(getCategoryTotal(selectedCategoryId, expenses, categories))}
                   </strong>
                 </span>
@@ -385,7 +416,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
             </div>
             <button
               onClick={() => setSelectedCategoryId(null)}
-              className="text-xs text-slate-400 hover:text-slate-600 px-2 py-1 rounded-md hover:bg-slate-100"
+              className="text-xs text-slate-400 hover:text-slate-600 px-2 py-1 rounded-md hover:bg-slate-100 shrink-0 whitespace-nowrap"
             >
               বন্ধ করুন
             </button>

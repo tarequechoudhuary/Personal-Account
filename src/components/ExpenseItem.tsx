@@ -99,7 +99,7 @@ export const ExpenseItem: React.FC<ExpenseItemProps> = ({
 
         {/* Right: Amount & Actions */}
         <div className="flex flex-col items-end shrink-0 pl-2">
-          <span className="text-base sm:text-lg font-bold text-rose-600 tracking-tight">
+          <span className="text-base sm:text-lg font-bold text-rose-600 tracking-tight whitespace-nowrap tabular-nums">
             -{formatCurrency(expense.amount)}
           </span>
 
